@@ -227,4 +227,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun getCurrentUser() = auth.currentUser
 }

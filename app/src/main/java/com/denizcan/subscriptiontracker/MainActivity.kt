@@ -34,6 +34,7 @@ import com.denizcan.subscriptiontracker.viewmodel.AuthState
 import com.denizcan.subscriptiontracker.viewmodel.AuthViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.denizcan.subscriptiontracker.ui.screens.analytics.AnalyticsScreen
+import com.denizcan.subscriptiontracker.ui.screens.profile.ProfileScreen
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AuthViewModel by viewModels()
@@ -235,7 +236,7 @@ fun AppNavigation(
             }
             
             composable(Screen.Profile.route) {
-                Text("Profil - Yakında") // Geçici olarak
+                ProfileScreen()
             }
         }
     }
