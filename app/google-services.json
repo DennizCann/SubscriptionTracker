@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1047567513637",
+    "project_id": "subscriptiontracker-c4cab",
+    "storage_bucket": "subscriptiontracker-c4cab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1047567513637:android:f9bb3e82dabdb99993e7cc",
+        "android_client_info": {
+          "package_name": "com.denizcan.subscriptiontracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1047567513637-ln0ufk6qgp56kvm2v0se1358ihm8p3i6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.denizcan.subscriptiontracker",
+            "certificate_hash": "ef379b6f1eba41a49c896adf7ae3c0e119eae908"
+          }
+        },
+        {
+          "client_id": "1047567513637-ugicmdfkvq0f9jv1ctkf8fcqmpec72h2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDW3ETCtOjYOVfQ3xRtVzjk0_ag9t-nKd4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1047567513637-ugicmdfkvq0f9jv1ctkf8fcqmpec72h2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
