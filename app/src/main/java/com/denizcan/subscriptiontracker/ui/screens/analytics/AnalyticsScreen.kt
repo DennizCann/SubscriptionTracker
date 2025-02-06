@@ -224,19 +224,35 @@ fun MonthlyTrendCard(
                     update = { chart ->
                         val entries = ArrayList<Entry>()
                         val calendar = Calendar.getInstance()
-                        val monthlyTotals = mutableMapOf<Int, Float>()
+                        val now = Date()
                         
                         // Son 6 ayın verilerini hazırla
                         for (i in 0..5) {
-                            calendar.time = Date()
+                            calendar.time = now
                             calendar.add(Calendar.MONTH, -i)
-                            val monthlyTotal = subscriptions.sumOf { it.price }.toFloat()
-                            monthlyTotals[5 - i] = monthlyTotal
-                        }
-
-                        // Sıralı bir şekilde Entry'leri oluştur
-                        monthlyTotals.entries.sortedBy { it.key }.forEach { (month, total) ->
-                            entries.add(Entry(month.toFloat(), total))
+                            
+                            // Bu ay başlangıcı
+                            calendar.set(Calendar.DAY_OF_MONTH, 1)
+                            calendar.set(Calendar.HOUR_OF_DAY, 0)
+                            calendar.set(Calendar.MINUTE, 0)
+                            calendar.set(Calendar.SECOND, 0)
+                            calendar.set(Calendar.MILLISECOND, 0)
+                            val monthStart = calendar.time
+                            
+                            // Bu ay sonu
+                            calendar.add(Calendar.MONTH, 1)
+                            calendar.add(Calendar.MILLISECOND, -1)
+                            val monthEnd = calendar.time
+                            
+                            // Bu aydaki aktif üyeliklerin toplamını hesapla
+                            val monthlyTotal = subscriptions
+                                .filter { sub ->
+                                    sub.startDate <= monthEnd
+                                }
+                                .sumOf { it.price }
+                                .toFloat()
+                            
+                            entries.add(0, Entry((5 - i).toFloat(), monthlyTotal))
                         }
 
                         val dataSet = LineDataSet(entries, "Aylık Harcama").apply {
@@ -274,16 +290,17 @@ fun CategoryPieChartCard(
 ) {
     val context = LocalContext.current
     val chartColors = listOf(
-        android.graphics.Color.parseColor("#2196F3"),  // Mavi
-        android.graphics.Color.parseColor("#4CAF50"),  // Yeşil
-        android.graphics.Color.parseColor("#FFC107"),  // Sarı
-        android.graphics.Color.parseColor("#E91E63"),  // Pembe
-        android.graphics.Color.parseColor("#9C27B0"),  // Mor
-        android.graphics.Color.parseColor("#FF5722"),  // Turuncu
-        android.graphics.Color.parseColor("#795548"),  // Kahverengi
-        android.graphics.Color.parseColor("#607D8B")   // Gri
+        android.graphics.Color.parseColor("#E57373"), // Kırmızı
+        android.graphics.Color.parseColor("#81C784"), // Yeşil
+        android.graphics.Color.parseColor("#64B5F6"), // Mavi
+        android.graphics.Color.parseColor("#BA68C8"), // Mor
+        android.graphics.Color.parseColor("#4DB6AC"), // Turkuaz
+        android.graphics.Color.parseColor("#FFB74D"), // Turuncu
+        android.graphics.Color.parseColor("#90A4AE"), // Gri
+        android.graphics.Color.parseColor("#9575CD"), // Mor
+        android.graphics.Color.parseColor("#78909C")  // Gri
     )
-    
+
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -295,83 +312,57 @@ fun CategoryPieChartCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(600.dp)
+                    .height(300.dp)
             ) {
                 AndroidView(
                     factory = { context ->
                         PieChart(context).apply {
                             description.isEnabled = false
-                            isDrawHoleEnabled = true
-                            holeRadius = 30f
-                            setHoleColor(android.graphics.Color.TRANSPARENT)
-                            transparentCircleRadius = 35f
-                            setDrawCenterText(false)
-                            legend.apply {
-                                isEnabled = true
-                                textSize = 9f
-                                formSize = 9f
-                                form = com.github.mikephil.charting.components.Legend.LegendForm.CIRCLE
-                                verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-                                horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
-                                orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.VERTICAL
-                                setDrawInside(false)
-                                xEntrySpace = 6f
-                                yEntrySpace = 2f
-                                textColor = android.graphics.Color.BLACK
-                                maxSizePercent = 1f
-                            }
-                            setDrawEntryLabels(false)
                             setUsePercentValues(true)
-                            setExtraOffsets(24f, 24f, 24f, 32f)
-                            minOffset = 0f
-                            rotationAngle = 0f
-                            isRotationEnabled = true
+                            legend.isEnabled = true
+                            setDrawEntryLabels(false)
+                            setDrawCenterText(true)
+                            centerText = "Kategori\nDağılımı"
+                            setCenterTextSize(14f)
+                            setHoleColor(android.graphics.Color.TRANSPARENT)
+                            setTransparentCircleColor(android.graphics.Color.TRANSPARENT)
+                            setTransparentCircleAlpha(110)
+                            holeRadius = 58f
+                            transparentCircleRadius = 61f
+                            setDrawCenterText(true)
+                            setDrawHoleEnabled(true)
+                            setDrawRoundedSlices(true)
+                            animateY(1000)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
                     update = { chart ->
-                        // Aktif abonelikleri filtrele
-                        val activeSubscriptions = subscriptions.filter { it.isActive }
-                        
-                        // Toplam aylık masrafı hesapla
-                        val totalMonthlyExpense = activeSubscriptions.sumOf { it.price }
-                        
-                        // Kategorilere göre topla ve yüzdeleri hesapla
-                        val categoryTotals = activeSubscriptions
+                        // Kategori bazlı harcamaları hesapla
+                        val categoryExpenses = subscriptions
                             .groupBy { it.category }
                             .mapValues { (_, subs) -> subs.sumOf { it.price } }
                             .toList()
                             .sortedByDescending { it.second }
 
-                        val entries = categoryTotals.map { (category, amount) ->
+                        // Toplam aylık harcama
+                        val totalMonthlyExpense = subscriptions.sumOf { it.price }
+
+                        val entries = categoryExpenses.map { (category, amount) ->
                             val percentage = (amount / totalMonthlyExpense) * 100
                             PieEntry(
                                 percentage.toFloat(),
-                                "${formatCurrency(amount)}\n${category.displayName.take(20)}"
+                                category.displayName
                             )
                         }
 
                         val dataSet = PieDataSet(entries, "").apply {
-                            colors = chartColors.take(entries.size)
-                            valueTextSize = 10f
-                            valueTextColor = android.graphics.Color.BLACK
-                            valueFormatter = PercentFormatter()
-                            yValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
-                            xValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
-                            valueLineColor = android.graphics.Color.BLACK
-                            valueLinePart1Length = 0.3f
-                            valueLinePart2Length = 0.5f
-                            valueLineWidth = 1.5f
-                            sliceSpace = 3f
+                            setColors(chartColors)
+                            valueTextSize = 14f
+                            valueTextColor = android.graphics.Color.WHITE
+                            valueFormatter = PercentFormatter(chart)
                         }
 
-                        val pieData = PieData(dataSet).apply {
-                            setValueTextSize(10f)
-                            setValueTextColor(android.graphics.Color.BLACK)
-                            setValueFormatter(PercentFormatter())
-                        }
-
-                        chart.data = pieData
+                        chart.data = PieData(dataSet)
                         chart.invalidate()
                     }
                 )
@@ -385,40 +376,42 @@ fun SubscriptionStatsCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier
 ) {
-    val activeSubscriptions = subscriptions.count { it.isActive }
     val totalSubscriptions = subscriptions.size
-    val averagePrice = if (subscriptions.isNotEmpty()) {
-        subscriptions.sumOf { it.price } / subscriptions.size
-    } else 0.0
+    val totalMonthlyExpense = subscriptions.sumOf { it.price }
+    val averageExpense = if (totalSubscriptions > 0) totalMonthlyExpense / totalSubscriptions else 0.0
+    val mostExpensiveCategory = subscriptions
+        .groupBy { it.category }
+        .mapValues { (_, subs) -> subs.sumOf { it.price } }
+        .maxByOrNull { it.value }
+        ?.key
 
     Card(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             Text(
-                text = "Abonelik İstatistikleri",
+                text = "İstatistikler",
                 style = MaterialTheme.typography.titleLarge
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                StatItem(
-                    icon = Icons.Default.CheckCircle,
-                    value = activeSubscriptions.toString(),
-                    label = "Aktif"
-                )
-                StatItem(
-                    icon = Icons.Default.List,
-                    value = totalSubscriptions.toString(),
-                    label = "Toplam"
-                )
-                StatItem(
-                    icon = Icons.Default.Info,
-                    value = formatCurrency(averagePrice),
-                    label = "Ortalama"
-                )
-            }
+            StatItem(
+                icon = Icons.Default.List,
+                label = "Toplam Üyelik",
+                value = totalSubscriptions.toString()
+            )
+
+            StatItem(
+                icon = Icons.Default.Info,
+                label = "Ortalama Aylık Maliyet",
+                value = formatCurrency(averageExpense)
+            )
+
+            StatItem(
+                icon = Icons.Default.CheckCircle,
+                label = "En Yüksek Kategori",
+                value = mostExpensiveCategory?.displayName ?: "-"
+            )
         }
     }
 }
@@ -426,8 +419,8 @@ fun SubscriptionStatsCard(
 @Composable
 fun StatItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    value: String,
-    label: String
+    label: String,
+    value: String
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -438,12 +431,12 @@ fun StatItem(
             tint = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
             text = label,
             style = MaterialTheme.typography.bodySmall
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium
         )
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.model.Subscription
 import com.denizcan.subscriptiontracker.model.PaymentPeriod
+import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
 import java.text.SimpleDateFormat
@@ -28,6 +29,17 @@ fun CalendarScreen(
     val subscriptionState by viewModel.subscriptionState.collectAsState()
     var selectedDate by remember { mutableStateOf<Date?>(null) }
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
+    var effectivePlans by remember { mutableStateOf<Map<String, PlanHistoryEntry?>>(emptyMap()) }
+    
+    // Seçili tarih değiştiğinde plan geçmişini güncelle
+    LaunchedEffect(selectedDate, subscriptionState) {
+        if (selectedDate != null && subscriptionState is SubscriptionState.Success) {
+            val subscriptions = (subscriptionState as SubscriptionState.Success).subscriptions
+            effectivePlans = subscriptions.associate { subscription ->
+                subscription.id to viewModel.getEffectivePlanForDate(subscription.id, selectedDate!!)
+            }
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -94,9 +106,8 @@ fun CalendarScreen(
                             val startDate = Calendar.getInstance().apply { time = subscription.startDate }
                             
                             when (subscription.paymentPeriod) {
-                                PaymentPeriod.MONTHLY -> {
+                                PaymentPeriod.MONTHLY -> 
                                     selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH)
-                                }
                                 PaymentPeriod.QUARTERLY -> {
                                     val monthDiff = (selectedCal.get(Calendar.YEAR) - startDate.get(Calendar.YEAR)) * 12 +
                                             (selectedCal.get(Calendar.MONTH) - startDate.get(Calendar.MONTH))
@@ -104,11 +115,10 @@ fun CalendarScreen(
                                     selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH) &&
                                             monthDiff >= 0 && monthDiff % 3 == 0
                                 }
-                                PaymentPeriod.YEARLY -> {
+                                PaymentPeriod.YEARLY -> 
                                     selectedCal.get(Calendar.MONTH) == paymentCal.get(Calendar.MONTH) &&
-                                            selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH) &&
-                                            selectedCal.get(Calendar.YEAR) >= startDate.get(Calendar.YEAR)
-                                }
+                                    selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH) &&
+                                    selectedCal.get(Calendar.YEAR) >= startDate.get(Calendar.YEAR)
                             }
                         }
                     }
@@ -125,6 +135,7 @@ fun CalendarScreen(
                     }
                 } else {
                     items(paymentsForDate) { subscription ->
+                        val effectivePlan = effectivePlans[subscription.id]
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -143,13 +154,13 @@ fun CalendarScreen(
                                         style = MaterialTheme.typography.titleSmall
                                     )
                                     Text(
-                                        text = subscription.plan,
+                                        text = effectivePlan?.plan ?: subscription.plan,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                                 Text(
-                                    text = "₺${subscription.price}",
+                                    text = "₺${effectivePlan?.price ?: subscription.price}",
                                     style = MaterialTheme.typography.titleMedium
                                 )
                             }

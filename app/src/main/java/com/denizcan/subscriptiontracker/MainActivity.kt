@@ -35,6 +35,7 @@ import com.denizcan.subscriptiontracker.viewmodel.AuthViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.denizcan.subscriptiontracker.ui.screens.analytics.AnalyticsScreen
 import com.denizcan.subscriptiontracker.ui.screens.profile.ProfileScreen
+import com.denizcan.subscriptiontracker.ui.screens.subscription.SubscriptionDetailScreen
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AuthViewModel by viewModels()
@@ -175,8 +176,8 @@ fun AppNavigation(
                     onAddSubscription = {
                         navController.navigate(Screen.SelectSubscription.route)
                     },
-                    onEditSubscription = { id ->
-                        navController.navigate("${Screen.AddSubscription.route}/$id")
+                    onSubscriptionClick = { id ->
+                        navController.navigate("${Screen.SubscriptionDetail.route}/$id")
                     }
                 )
             }
@@ -237,6 +238,19 @@ fun AppNavigation(
             
             composable(Screen.Profile.route) {
                 ProfileScreen()
+            }
+
+            composable(
+                route = "${Screen.SubscriptionDetail.route}/{subscriptionId}",
+                arguments = listOf(navArgument("subscriptionId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val subscriptionId = backStackEntry.arguments?.getString("subscriptionId") ?: return@composable
+                SubscriptionDetailScreen(
+                    subscriptionId = subscriptionId,
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }

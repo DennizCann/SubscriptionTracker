@@ -5,9 +5,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +20,7 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.SwipeToDismiss
 import androidx.compose.material.rememberDismissState
@@ -30,7 +28,6 @@ import androidx.compose.material.DismissValue
 import androidx.compose.material.DismissDirection
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.PlayArrow
 import com.denizcan.subscriptiontracker.model.SubscriptionCategory
 import com.denizcan.subscriptiontracker.viewmodel.AuthState
 
@@ -41,7 +38,7 @@ fun HomeScreen(
     subscriptionViewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     onLogout: () -> Unit,
     onAddSubscription: () -> Unit = {},
-    onEditSubscription: (String) -> Unit = {}
+    onSubscriptionClick: (String) -> Unit = {}
 ) {
     var selectedCategory by remember { mutableStateOf<SubscriptionCategory?>(null) }
     val authState by authViewModel.authState.collectAsState()
@@ -148,8 +145,8 @@ fun HomeScreen(
                                     category = sub.category
                                 )
                             },
-                            onEdit = { id -> onEditSubscription(id) },
-                            onDelete = { id -> subscriptionViewModel.deleteSubscription(id) }
+                            onDelete = { id -> subscriptionViewModel.deleteSubscription(id) },
+                            onItemClick = onSubscriptionClick
                         )
                     }
                 }
@@ -249,8 +246,8 @@ fun SummaryCard(
 @Composable
 fun SubscriptionList(
     subscriptions: List<SubscriptionItem>,
-    onEdit: (String) -> Unit = {},
     onDelete: (String) -> Unit = {},
+    onItemClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -261,8 +258,8 @@ fun SubscriptionList(
         items(subscriptions) { subscription ->
             SubscriptionCard(
                 subscription = subscription,
-                onEdit = { onEdit(subscription.id) },
-                onDelete = { onDelete(subscription.id) }
+                onDelete = { onDelete(subscription.id) },
+                onItemClick = { onItemClick(subscription.id) }
             )
         }
     }
@@ -272,49 +269,61 @@ fun SubscriptionList(
 @Composable
 fun SubscriptionCard(
     subscription: SubscriptionItem,
-    onEdit: () -> Unit = {},
     onDelete: () -> Unit = {},
+    onItemClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
     val dismissState = rememberDismissState { dismissValue ->
         when (dismissValue) {
-            DismissValue.DismissedToEnd -> {
-                onEdit()
-                false
-            }
             DismissValue.DismissedToStart -> {
-                onDelete()
+                showDeleteDialog = true
                 false
             }
-            DismissValue.Default -> false
+            else -> false
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Üyeliği Sil") },
+            text = { Text("${subscription.name} üyeliğini silmek istediğinizden emin misiniz?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Evet")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false }
+                ) {
+                    Text("Hayır")
+                }
+            }
+        )
     }
 
     SwipeToDismiss(
         state = dismissState,
-        directions = setOf(DismissDirection.StartToEnd, DismissDirection.EndToStart),
+        directions = setOf(DismissDirection.EndToStart),
         background = {
             val direction = dismissState.dismissDirection ?: return@SwipeToDismiss
-            val color = when (direction) {
-                DismissDirection.StartToEnd -> MaterialTheme.colorScheme.primary
-                DismissDirection.EndToStart -> MaterialTheme.colorScheme.error
-            }
-            val alignment = when (direction) {
-                DismissDirection.StartToEnd -> Alignment.CenterStart
-                DismissDirection.EndToStart -> Alignment.CenterEnd
-            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(color)
+                    .background(MaterialTheme.colorScheme.error)
                     .padding(horizontal = 20.dp),
-                contentAlignment = alignment
+                contentAlignment = Alignment.CenterEnd
             ) {
                 Text(
-                    text = when (direction) {
-                        DismissDirection.StartToEnd -> "Düzenle"
-                        DismissDirection.EndToStart -> "Sil"
-                    },
+                    text = "Sil",
                     color = Color.White
                 )
             }
@@ -324,6 +333,7 @@ fun SubscriptionCard(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
+                .clickable(onClick = onItemClick)
         ) {
             Row(
                 modifier = Modifier
