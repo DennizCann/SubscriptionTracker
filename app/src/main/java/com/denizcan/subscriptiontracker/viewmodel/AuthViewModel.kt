@@ -205,28 +205,5 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // Oturum durumunu kontrol etmek için yeni bir fonksiyon
-    fun checkAuthState() {
-        viewModelScope.launch {
-            try {
-                val currentUser = auth.currentUser
-                val googleAccount = GoogleSignIn.getLastSignedInAccount(context)
-
-                if (currentUser == null && googleAccount == null) {
-                    println("Aktif oturum bulunamadı, Initial state'e geçiliyor")
-                    _authState.value = AuthState.Initial
-                    _userName.value = ""
-                } else if (currentUser != null) {
-                    println("Aktif Firebase oturumu bulundu")
-                    _authState.value = AuthState.Success(currentUser)
-                    loadUserData(currentUser.uid)
-                }
-            } catch (e: Exception) {
-                println("Oturum durumu kontrol hatası: ${e.message}")
-                _authState.value = AuthState.Error("Oturum durumu kontrol edilirken hata oluştu")
-            }
-        }
-    }
-
     fun getCurrentUser() = auth.currentUser
 }

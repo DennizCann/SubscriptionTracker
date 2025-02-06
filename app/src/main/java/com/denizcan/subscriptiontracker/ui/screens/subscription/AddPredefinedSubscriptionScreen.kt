@@ -27,7 +27,6 @@ fun AddPredefinedSubscriptionScreen(
     viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     var selectedPlan by remember { mutableStateOf<PredefinedPlan?>(null) }
-    var price by remember { mutableStateOf("") }
     var selectedPaymentPeriod by remember { mutableStateOf<PaymentPeriod>(PaymentPeriod.MONTHLY) }
     var startDate by remember { mutableStateOf(Date()) }
 

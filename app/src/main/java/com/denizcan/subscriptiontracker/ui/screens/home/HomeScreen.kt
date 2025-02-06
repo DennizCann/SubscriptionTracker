@@ -42,7 +42,6 @@ fun HomeScreen(
 ) {
     var selectedCategory by remember { mutableStateOf<SubscriptionCategory?>(null) }
     val authState by authViewModel.authState.collectAsState()
-    val userName by authViewModel.userName.collectAsState()
     val subscriptionState by subscriptionViewModel.subscriptionState.collectAsState()
     
     // Ekran ilk yüklendiğinde verileri çek
@@ -314,7 +313,6 @@ fun SubscriptionCard(
         state = dismissState,
         directions = setOf(DismissDirection.EndToStart),
         background = {
-            val direction = dismissState.dismissDirection ?: return@SwipeToDismiss
             Box(
                 modifier = Modifier
                     .fillMaxSize()

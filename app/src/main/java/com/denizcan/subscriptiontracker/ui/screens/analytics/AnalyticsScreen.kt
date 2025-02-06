@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.github.mikephil.charting.charts.LineChart
@@ -35,7 +34,6 @@ fun AnalyticsScreen(
     viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val subscriptionState by viewModel.subscriptionState.collectAsState()
-    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -171,7 +169,6 @@ fun MonthlyTrendCard(
     modifier: Modifier = Modifier,
     viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    val context = LocalContext.current
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
     var planHistoryMap by remember { mutableStateOf<Map<String, List<PlanHistoryEntry>>>(emptyMap()) }
     
@@ -300,7 +297,6 @@ fun CategoryPieChartCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val chartColors = listOf(
         android.graphics.Color.parseColor("#E57373"), // Kırmızı
         android.graphics.Color.parseColor("#81C784"), // Yeşil

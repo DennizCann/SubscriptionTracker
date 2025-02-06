@@ -46,7 +46,7 @@ fun SubscriptionDetailScreen(
     var editedStartDate by remember { mutableStateOf<Date?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var planHistory by remember { mutableStateOf<List<PlanHistoryEntry>>(emptyList()) }
-    var totalSpent by remember { mutableStateOf(0.0) }
+    var totalSpent by remember { mutableDoubleStateOf(0.0) }
 
     LaunchedEffect(subscription) {
         subscription?.let { sub ->
