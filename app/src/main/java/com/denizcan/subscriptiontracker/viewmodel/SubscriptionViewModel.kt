@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.denizcan.subscriptiontracker.model.PaymentPeriod
 import com.denizcan.subscriptiontracker.model.Subscription
 import com.denizcan.subscriptiontracker.model.SubscriptionCategory
-import com.denizcan.subscriptiontracker.ui.screens.subscription.calculateNextPaymentDate
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth

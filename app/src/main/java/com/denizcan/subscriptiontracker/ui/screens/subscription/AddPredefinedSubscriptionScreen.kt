@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.model.PaymentPeriod
 import com.denizcan.subscriptiontracker.model.PredefinedPlan
 import com.denizcan.subscriptiontracker.model.PredefinedSubscription
-import com.denizcan.subscriptiontracker.model.Subscription
 import com.denizcan.subscriptiontracker.ui.components.DatePickerButton
 import com.denizcan.subscriptiontracker.ui.components.PaymentPeriodSelector
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel

@@ -7,16 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.Canvas
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.sp
 import com.denizcan.subscriptiontracker.model.Subscription
-import com.denizcan.subscriptiontracker.model.SubscriptionCategory
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
 import java.text.NumberFormat
 import java.util.*
