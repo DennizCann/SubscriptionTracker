@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.*
@@ -82,7 +83,8 @@ fun AnalyticsScreen(
                     item {
                         MonthlyTrendCard(
                             subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
+                            viewModel = viewModel
                         )
                     }
 
@@ -175,10 +177,19 @@ fun MonthlyExpenseCard(
 @Composable
 fun MonthlyTrendCard(
     subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
+    var planHistoryMap by remember { mutableStateOf<Map<String, List<PlanHistoryEntry>>>(emptyMap()) }
+    
+    // Plan geçmişlerini yükle
+    LaunchedEffect(subscriptions) {
+        planHistoryMap = subscriptions.associate { subscription ->
+            subscription.id to viewModel.getPlanHistory(subscription.id)
+        }
+    }
     
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -244,15 +255,25 @@ fun MonthlyTrendCard(
                             calendar.add(Calendar.MILLISECOND, -1)
                             val monthEnd = calendar.time
                             
-                            // Bu aydaki aktif üyeliklerin toplamını hesapla
-                            val monthlyTotal = subscriptions
-                                .filter { sub ->
-                                    sub.startDate <= monthEnd
-                                }
-                                .sumOf { it.price }
-                                .toFloat()
+                            // Bu aydaki toplam harcamayı hesapla
+                            var monthlyTotal = 0.0
                             
-                            entries.add(0, Entry((5 - i).toFloat(), monthlyTotal))
+                            subscriptions.forEach { subscription ->
+                                val planHistory = planHistoryMap[subscription.id] ?: emptyList()
+                                
+                                // Bu ay için geçerli olan planı bul
+                                val effectivePlan = planHistory.findLast { entry ->
+                                    entry.startDate <= monthEnd && 
+                                    (entry.endDate == null || entry.endDate > monthStart)
+                                }
+                                
+                                // Eğer plan bulunduysa fiyatı ekle
+                                if (effectivePlan != null) {
+                                    monthlyTotal += effectivePlan.price
+                                }
+                            }
+                            
+                            entries.add(0, Entry((5 - i).toFloat(), monthlyTotal.toFloat()))
                         }
 
                         val dataSet = LineDataSet(entries, "Aylık Harcama").apply {
