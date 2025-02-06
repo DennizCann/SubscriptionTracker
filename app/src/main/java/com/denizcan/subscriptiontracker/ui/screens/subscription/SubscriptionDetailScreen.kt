@@ -636,6 +636,9 @@ private fun getCategoryColor(category: SubscriptionCategory): Color {
         SubscriptionCategory.SPORTS -> Color(0xFFFFB74D)
         SubscriptionCategory.STORAGE -> Color(0xFF90A4AE)
         SubscriptionCategory.PRODUCTIVITY -> Color(0xFF9575CD)
+        SubscriptionCategory.AI -> Color(0xFF7986CB)
+        SubscriptionCategory.NEWS -> Color(0xFFF06292)
+        SubscriptionCategory.FOOD -> Color(0xFFFF8A65)
         SubscriptionCategory.OTHER -> Color(0xFF78909C)
     }
 } 

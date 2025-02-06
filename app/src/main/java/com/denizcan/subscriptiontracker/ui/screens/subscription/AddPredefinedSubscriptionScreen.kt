@@ -1,18 +1,17 @@
 package com.denizcan.subscriptiontracker.ui.screens.subscription
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.model.PaymentPeriod
-import com.denizcan.subscriptiontracker.model.PredefinedPlan
 import com.denizcan.subscriptiontracker.model.PredefinedSubscription
 import com.denizcan.subscriptiontracker.ui.components.DatePickerButton
 import com.denizcan.subscriptiontracker.ui.components.PaymentPeriodSelector
@@ -26,7 +25,8 @@ fun AddPredefinedSubscriptionScreen(
     onNavigateBack: () -> Unit,
     viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    var selectedPlan by remember { mutableStateOf<PredefinedPlan?>(null) }
+    var plan by remember { mutableStateOf("") }
+    var price by remember { mutableStateOf("") }
     var selectedPaymentPeriod by remember { mutableStateOf<PaymentPeriod>(PaymentPeriod.MONTHLY) }
     var startDate by remember { mutableStateOf(Date()) }
 
@@ -48,11 +48,11 @@ fun AddPredefinedSubscriptionScreen(
             ) {
                 Button(
                     onClick = {
-                        selectedPlan?.let { plan ->
+                        if (plan.isNotBlank() && price.isNotBlank()) {
                             viewModel.addSubscription(
                                 name = predefinedSubscription.name,
-                                plan = plan.name,
-                                price = plan.price,
+                                plan = plan,
+                                price = price.toDoubleOrNull() ?: 0.0,
                                 category = predefinedSubscription.category,
                                 paymentPeriod = selectedPaymentPeriod,
                                 startDate = startDate
@@ -63,7 +63,7 @@ fun AddPredefinedSubscriptionScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    enabled = selectedPlan != null
+                    enabled = plan.isNotBlank() && price.isNotBlank()
                 ) {
                     Text("Kaydet")
                 }
@@ -97,15 +97,22 @@ fun AddPredefinedSubscriptionScreen(
                 }
             }
 
-            // Plan seçimi
-            Text("Plan Seçin", style = MaterialTheme.typography.titleMedium)
-            predefinedSubscription.plans.forEach { planItem ->
-                PlanSelectionCard(
-                    plan = planItem,
-                    isSelected = planItem == selectedPlan,
-                    onClick = { selectedPlan = planItem }
-                )
-            }
+            // Plan girişi
+            Text("Plan Bilgileri", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = plan,
+                onValueChange = { plan = it },
+                label = { Text("Plan Adı") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = price,
+                onValueChange = { price = it },
+                label = { Text("Fiyat") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // Başlangıç tarihi
             Text("Başlangıç Tarihi", style = MaterialTheme.typography.titleMedium)
@@ -119,43 +126,6 @@ fun AddPredefinedSubscriptionScreen(
             PaymentPeriodSelector(
                 selectedPeriod = selectedPaymentPeriod,
                 onPeriodSelected = { selectedPaymentPeriod = it }
-            )
-        }
-    }
-}
-
-@Composable
-fun PlanSelectionCard(
-    plan: PredefinedPlan,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = plan.name,
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = "₺${plan.price}",
-                style = MaterialTheme.typography.titleMedium
             )
         }
     }

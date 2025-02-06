@@ -312,11 +312,17 @@ fun SubscriptionCard(
     SwipeToDismiss(
         state = dismissState,
         directions = setOf(DismissDirection.EndToStart),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         background = {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.error)
+                    .background(
+                        MaterialTheme.colorScheme.error,
+                        shape = MaterialTheme.shapes.medium
+                    )
                     .padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
@@ -330,8 +336,8 @@ fun SubscriptionCard(
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clickable(onClick = onItemClick)
+                .clickable(onClick = onItemClick),
+            shape = MaterialTheme.shapes.medium
         ) {
             Row(
                 modifier = Modifier
@@ -399,6 +405,9 @@ fun getCategoryColor(category: SubscriptionCategory): Color {
         SubscriptionCategory.SPORTS -> Color(0xFFFFB74D) // Turuncu
         SubscriptionCategory.STORAGE -> Color(0xFF90A4AE) // Gri
         SubscriptionCategory.PRODUCTIVITY -> Color(0xFF9575CD) // Mor
+        SubscriptionCategory.AI -> Color(0xFF7986CB) // İndigo
+        SubscriptionCategory.NEWS -> Color(0xFFF06292) // Pembe
+        SubscriptionCategory.FOOD -> Color(0xFFFF8A65) // Turuncu-Kırmızı
         SubscriptionCategory.OTHER -> Color(0xFF78909C) // Gri
     }
 }

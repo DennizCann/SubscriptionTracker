@@ -9,18 +9,15 @@ enum class SubscriptionCategory(val displayName: String) {
     SPORTS("Spor"),
     STORAGE("Depolama"),
     PRODUCTIVITY("Üretkenlik"),
+    AI("Yapay Zeka"),
+    NEWS("Haber/Dergi"),
+    FOOD("Yemek"),
     OTHER("Diğer")
 }
 
 data class PredefinedSubscription(
     val name: String,
-    val category: SubscriptionCategory,
-    val plans: List<PredefinedPlan>
-)
-
-data class PredefinedPlan(
-    val name: String,
-    val price: Double
+    val category: SubscriptionCategory
 )
 
 object PredefinedSubscriptions {
@@ -28,256 +25,303 @@ object PredefinedSubscriptions {
         // Streaming/Video
         PredefinedSubscription(
             name = "Netflix",
-            category = SubscriptionCategory.STREAMING,
-            plans = listOf(
-                PredefinedPlan("Temel Plan", 63.99),
-                PredefinedPlan("Standart Plan", 97.99),
-                PredefinedPlan("Özel Plan", 130.99)
-            )
+            category = SubscriptionCategory.STREAMING
         ),
         PredefinedSubscription(
             name = "Prime Video",
-            category = SubscriptionCategory.STREAMING,
-            plans = listOf(
-                PredefinedPlan("Aylık", 39.99),
-                PredefinedPlan("Yıllık", 399.99)
-            )
+            category = SubscriptionCategory.STREAMING
         ),
         PredefinedSubscription(
             name = "Disney+",
-            category = SubscriptionCategory.STREAMING,
-            plans = listOf(
-                PredefinedPlan("Aylık", 64.99),
-                PredefinedPlan("Yıllık", 649.90)
-            )
+            category = SubscriptionCategory.STREAMING
         ),
         PredefinedSubscription(
             name = "BluTV",
-            category = SubscriptionCategory.STREAMING,
-            plans = listOf(
-                PredefinedPlan("Standart", 89.90),
-                PredefinedPlan("Premium", 119.90)
-            )
+            category = SubscriptionCategory.STREAMING
         ),
         PredefinedSubscription(
             name = "MUBI",
-            category = SubscriptionCategory.STREAMING,
-            plans = listOf(
-                PredefinedPlan("Aylık", 49.99),
-                PredefinedPlan("Yıllık", 449.90)
-            )
+            category = SubscriptionCategory.STREAMING
         ),
         PredefinedSubscription(
             name = "Gain",
-            category = SubscriptionCategory.STREAMING,
-            plans = listOf(
-                PredefinedPlan("Aylık", 34.99),
-                PredefinedPlan("Yıllık", 349.90)
-            )
+            category = SubscriptionCategory.STREAMING
+        ),
+        PredefinedSubscription(
+            name = "beIN CONNECT",
+            category = SubscriptionCategory.STREAMING
+        ),
+        PredefinedSubscription(
+            name = "HBO Max",
+            category = SubscriptionCategory.STREAMING
+        ),
+        PredefinedSubscription(
+            name = "Apple TV+",
+            category = SubscriptionCategory.STREAMING
         ),
         
         // Müzik
         PredefinedSubscription(
             name = "Spotify",
-            category = SubscriptionCategory.MUSIC,
-            plans = listOf(
-                PredefinedPlan("Bireysel", 49.99),
-                PredefinedPlan("Duo", 63.99),
-                PredefinedPlan("Aile", 89.99),
-                PredefinedPlan("Öğrenci", 24.99)
-            )
+            category = SubscriptionCategory.MUSIC
         ),
         PredefinedSubscription(
             name = "Apple Music",
-            category = SubscriptionCategory.MUSIC,
-            plans = listOf(
-                PredefinedPlan("Bireysel", 44.99),
-                PredefinedPlan("Aile", 64.99),
-                PredefinedPlan("Öğrenci", 22.49)
-            )
+            category = SubscriptionCategory.MUSIC
         ),
         PredefinedSubscription(
             name = "YouTube Music",
-            category = SubscriptionCategory.MUSIC,
-            plans = listOf(
-                PredefinedPlan("Bireysel", 29.99),
-                PredefinedPlan("Aile", 59.99)
-            )
+            category = SubscriptionCategory.MUSIC
         ),
         PredefinedSubscription(
             name = "Deezer",
-            category = SubscriptionCategory.MUSIC,
-            plans = listOf(
-                PredefinedPlan("Bireysel", 44.99),
-                PredefinedPlan("Aile", 67.49),
-                PredefinedPlan("Öğrenci", 22.49)
-            )
+            category = SubscriptionCategory.MUSIC
+        ),
+        PredefinedSubscription(
+            name = "Tidal",
+            category = SubscriptionCategory.MUSIC
+        ),
+        PredefinedSubscription(
+            name = "Amazon Music",
+            category = SubscriptionCategory.MUSIC
         ),
         
         // Eğitim
         PredefinedSubscription(
             name = "Udemy",
-            category = SubscriptionCategory.EDUCATION,
-            plans = listOf(
-                PredefinedPlan("Personal Plan", 199.99)
-            )
+            category = SubscriptionCategory.EDUCATION
         ),
         PredefinedSubscription(
             name = "Coursera Plus",
-            category = SubscriptionCategory.EDUCATION,
-            plans = listOf(
-                PredefinedPlan("Aylık", 499.00),
-                PredefinedPlan("Yıllık", 3999.00)
-            )
+            category = SubscriptionCategory.EDUCATION
         ),
         PredefinedSubscription(
             name = "Duolingo Plus",
-            category = SubscriptionCategory.EDUCATION,
-            plans = listOf(
-                PredefinedPlan("Aylık", 94.99),
-                PredefinedPlan("Yıllık", 599.99)
-            )
+            category = SubscriptionCategory.EDUCATION
         ),
         PredefinedSubscription(
             name = "Tureng Premium",
-            category = SubscriptionCategory.EDUCATION,
-            plans = listOf(
-                PredefinedPlan("Aylık", 29.99),
-                PredefinedPlan("Yıllık", 299.99)
-            )
+            category = SubscriptionCategory.EDUCATION
+        ),
+        PredefinedSubscription(
+            name = "LinkedIn Learning",
+            category = SubscriptionCategory.EDUCATION
+        ),
+        PredefinedSubscription(
+            name = "Masterclass",
+            category = SubscriptionCategory.EDUCATION
+        ),
+        PredefinedSubscription(
+            name = "Pluralsight",
+            category = SubscriptionCategory.EDUCATION
+        ),
+        PredefinedSubscription(
+            name = "Skillshare",
+            category = SubscriptionCategory.EDUCATION
         ),
         
         // Oyun
         PredefinedSubscription(
             name = "Xbox Game Pass",
-            category = SubscriptionCategory.GAMING,
-            plans = listOf(
-                PredefinedPlan("PC", 99.00),
-                PredefinedPlan("Ultimate", 149.00)
-            )
+            category = SubscriptionCategory.GAMING
         ),
         PredefinedSubscription(
             name = "PlayStation Plus",
-            category = SubscriptionCategory.GAMING,
-            plans = listOf(
-                PredefinedPlan("Essential", 149.00),
-                PredefinedPlan("Extra", 239.00),
-                PredefinedPlan("Deluxe", 269.00)
-            )
+            category = SubscriptionCategory.GAMING
         ),
         PredefinedSubscription(
             name = "EA Play",
-            category = SubscriptionCategory.GAMING,
-            plans = listOf(
-                PredefinedPlan("Aylık", 49.90),
-                PredefinedPlan("Yıllık", 299.90)
-            )
+            category = SubscriptionCategory.GAMING
         ),
         PredefinedSubscription(
             name = "GeForce NOW",
-            category = SubscriptionCategory.GAMING,
-            plans = listOf(
-                PredefinedPlan("Priority", 150.00),
-                PredefinedPlan("Ultimate", 250.00)
-            )
+            category = SubscriptionCategory.GAMING
+        ),
+        PredefinedSubscription(
+            name = "Nintendo Switch Online",
+            category = SubscriptionCategory.GAMING
+        ),
+        PredefinedSubscription(
+            name = "Ubisoft+",
+            category = SubscriptionCategory.GAMING
         ),
         
         // Yazılım/Araçlar
         PredefinedSubscription(
             name = "Microsoft 365",
-            category = SubscriptionCategory.SOFTWARE,
-            plans = listOf(
-                PredefinedPlan("Bireysel", 99.99),
-                PredefinedPlan("Aile", 149.99)
-            )
+            category = SubscriptionCategory.SOFTWARE
         ),
         PredefinedSubscription(
             name = "Adobe Creative Cloud",
-            category = SubscriptionCategory.SOFTWARE,
-            plans = listOf(
-                PredefinedPlan("Fotoğraf Planı", 249.00),
-                PredefinedPlan("Tüm Uygulamalar", 749.00)
-            )
+            category = SubscriptionCategory.SOFTWARE
         ),
         PredefinedSubscription(
             name = "JetBrains All Products",
-            category = SubscriptionCategory.SOFTWARE,
-            plans = listOf(
-                PredefinedPlan("Aylık", 249.00),
-                PredefinedPlan("Yıllık", 2490.00)
-            )
+            category = SubscriptionCategory.SOFTWARE
+        ),
+        PredefinedSubscription(
+            name = "GitHub Copilot",
+            category = SubscriptionCategory.SOFTWARE
+        ),
+        PredefinedSubscription(
+            name = "Figma",
+            category = SubscriptionCategory.SOFTWARE
+        ),
+        PredefinedSubscription(
+            name = "1Password",
+            category = SubscriptionCategory.SOFTWARE
+        ),
+        PredefinedSubscription(
+            name = "NordVPN",
+            category = SubscriptionCategory.SOFTWARE
         ),
         
         // Spor/Fitness
         PredefinedSubscription(
-            name = "beIN CONNECT",
-            category = SubscriptionCategory.SPORTS,
-            plans = listOf(
-                PredefinedPlan("Standart", 179.00),
-                PredefinedPlan("Premium", 229.00)
-            )
+            name = "beIN SPORTS",
+            category = SubscriptionCategory.SPORTS
         ),
         PredefinedSubscription(
             name = "S Sport Plus",
-            category = SubscriptionCategory.SPORTS,
-            plans = listOf(
-                PredefinedPlan("Aylık", 179.00),
-                PredefinedPlan("Yıllık", 1499.00)
-            )
+            category = SubscriptionCategory.SPORTS
         ),
         PredefinedSubscription(
             name = "Fitbod",
-            category = SubscriptionCategory.SPORTS,
-            plans = listOf(
-                PredefinedPlan("Aylık", 89.99),
-                PredefinedPlan("Yıllık", 449.99)
-            )
+            category = SubscriptionCategory.SPORTS
+        ),
+        PredefinedSubscription(
+            name = "Strava",
+            category = SubscriptionCategory.SPORTS
+        ),
+        PredefinedSubscription(
+            name = "Nike Training Club",
+            category = SubscriptionCategory.SPORTS
+        ),
+        PredefinedSubscription(
+            name = "MyFitnessPal",
+            category = SubscriptionCategory.SPORTS
         ),
         
         // Depolama
         PredefinedSubscription(
             name = "Google One",
-            category = SubscriptionCategory.STORAGE,
-            plans = listOf(
-                PredefinedPlan("100 GB", 19.99),
-                PredefinedPlan("200 GB", 29.99),
-                PredefinedPlan("2 TB", 99.99)
-            )
+            category = SubscriptionCategory.STORAGE
         ),
         PredefinedSubscription(
             name = "iCloud+",
-            category = SubscriptionCategory.STORAGE,
-            plans = listOf(
-                PredefinedPlan("50 GB", 14.99),
-                PredefinedPlan("200 GB", 44.99),
-                PredefinedPlan("2 TB", 149.99)
-            )
+            category = SubscriptionCategory.STORAGE
         ),
         PredefinedSubscription(
             name = "Dropbox",
-            category = SubscriptionCategory.STORAGE,
-            plans = listOf(
-                PredefinedPlan("Plus", 119.99),
-                PredefinedPlan("Family", 199.99)
-            )
+            category = SubscriptionCategory.STORAGE
+        ),
+        PredefinedSubscription(
+            name = "OneDrive",
+            category = SubscriptionCategory.STORAGE
+        ),
+        PredefinedSubscription(
+            name = "pCloud",
+            category = SubscriptionCategory.STORAGE
         ),
         
         // Üretkenlik
         PredefinedSubscription(
             name = "Notion",
-            category = SubscriptionCategory.PRODUCTIVITY,
-            plans = listOf(
-                PredefinedPlan("Plus", 96.00),
-                PredefinedPlan("Business", 192.00)
-            )
+            category = SubscriptionCategory.PRODUCTIVITY
         ),
         PredefinedSubscription(
             name = "Evernote",
-            category = SubscriptionCategory.PRODUCTIVITY,
-            plans = listOf(
-                PredefinedPlan("Personal", 149.99),
-                PredefinedPlan("Professional", 199.99)
-            )
+            category = SubscriptionCategory.PRODUCTIVITY
+        ),
+        PredefinedSubscription(
+            name = "Todoist",
+            category = SubscriptionCategory.PRODUCTIVITY
+        ),
+        PredefinedSubscription(
+            name = "Grammarly",
+            category = SubscriptionCategory.PRODUCTIVITY
+        ),
+        PredefinedSubscription(
+            name = "Asana",
+            category = SubscriptionCategory.PRODUCTIVITY
+        ),
+        PredefinedSubscription(
+            name = "Monday.com",
+            category = SubscriptionCategory.PRODUCTIVITY
+        ),
+
+        // Yapay Zeka
+        PredefinedSubscription(
+            name = "ChatGPT Plus",
+            category = SubscriptionCategory.AI
+        ),
+        PredefinedSubscription(
+            name = "Claude Pro",
+            category = SubscriptionCategory.AI
+        ),
+        PredefinedSubscription(
+            name = "Midjourney",
+            category = SubscriptionCategory.AI
+        ),
+        PredefinedSubscription(
+            name = "Copilot Pro",
+            category = SubscriptionCategory.AI
+        ),
+        PredefinedSubscription(
+            name = "Perplexity Pro",
+            category = SubscriptionCategory.AI
+        ),
+        PredefinedSubscription(
+            name = "Poe",
+            category = SubscriptionCategory.AI
+        ),
+        PredefinedSubscription(
+            name = "Runway",
+            category = SubscriptionCategory.AI
+        ),
+
+        // Haber/Dergi
+        PredefinedSubscription(
+            name = "Apple News+",
+            category = SubscriptionCategory.NEWS
+        ),
+        PredefinedSubscription(
+            name = "Medium",
+            category = SubscriptionCategory.NEWS
+        ),
+        PredefinedSubscription(
+            name = "The New York Times",
+            category = SubscriptionCategory.NEWS
+        ),
+        PredefinedSubscription(
+            name = "Bloomberg",
+            category = SubscriptionCategory.NEWS
+        ),
+        PredefinedSubscription(
+            name = "The Economist",
+            category = SubscriptionCategory.NEWS
+        ),
+        PredefinedSubscription(
+            name = "Financial Times",
+            category = SubscriptionCategory.NEWS
+        ),
+
+        // Yemek
+        PredefinedSubscription(
+            name = "Yemeksepeti",
+            category = SubscriptionCategory.FOOD
+        ),
+        PredefinedSubscription(
+            name = "Getir",
+            category = SubscriptionCategory.FOOD
+        ),
+        PredefinedSubscription(
+            name = "Migros Hemen",
+            category = SubscriptionCategory.FOOD
+        ),
+        PredefinedSubscription(
+            name = "Trendyol Yemek",
+            category = SubscriptionCategory.FOOD
         )
     )
 } 
