@@ -22,7 +22,9 @@ import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
 @Composable
 fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel(),
-    subscriptionViewModel: SubscriptionViewModel = viewModel()
+    subscriptionViewModel: SubscriptionViewModel = viewModel(),
+    onNavigateToSettings: () -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val userName by authViewModel.userName.collectAsState()
     val userEmail = authViewModel.getCurrentUser()?.email ?: ""
@@ -59,23 +61,46 @@ fun ProfileScreen(
 
             Divider()
 
-            // Ayarlar
-            SettingsSection(
-                onLogoutClick = { showLogoutDialog = true }
-            )
+            // Ayarlar Butonu
+            OutlinedButton(
+                onClick = onNavigateToSettings,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null)
+                    Text("Uygulama Ayarları")
+                }
+            }
+
+            // Çıkış Yap Butonu
+            OutlinedButton(
+                onClick = { showLogoutDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.ExitToApp, contentDescription = null)
+                    Text("Çıkış Yap")
+                }
+            }
         }
 
-        // Çıkış Yapma Dialog
         if (showLogoutDialog) {
             AlertDialog(
                 onDismissRequest = { showLogoutDialog = false },
                 title = { Text("Çıkış Yap") },
-                text = { Text("Hesabınızdan çıkış yapmak istediğinize emin misiniz?") },
+                text = { Text("Çıkış yapmak istediğinize emin misiniz?") },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             authViewModel.logout()
                             showLogoutDialog = false
+                            onLogout()
                         }
                     ) {
                         Text("Evet")
@@ -83,7 +108,7 @@ fun ProfileScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showLogoutDialog = false }) {
-                        Text("Hayır")
+                        Text("İptal")
                     }
                 }
             )

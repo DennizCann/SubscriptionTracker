@@ -36,6 +36,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.denizcan.subscriptiontracker.ui.screens.analytics.AnalyticsScreen
 import com.denizcan.subscriptiontracker.ui.screens.profile.ProfileScreen
 import com.denizcan.subscriptiontracker.ui.screens.subscription.SubscriptionDetailScreen
+import com.denizcan.subscriptiontracker.ui.screens.settings.SettingsScreen
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AuthViewModel by viewModels()
@@ -237,7 +238,24 @@ fun AppNavigation(
             }
             
             composable(Screen.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    },
+                    onLogout = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(

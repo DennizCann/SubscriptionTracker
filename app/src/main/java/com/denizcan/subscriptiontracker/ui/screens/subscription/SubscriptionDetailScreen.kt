@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -25,6 +26,7 @@ import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.ceil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,23 +63,87 @@ fun SubscriptionDetailScreen(
             val history = viewModel.getPlanHistory(sub.id)
             planHistory = history
 
+            println("Plan Geçmişi Yüklendi - Üyelik: ${sub.name}")
+            println("Geçmiş Kayıt Sayısı: ${history.size}")
+
             // Toplam harcamayı hesapla
             var total = 0.0
             val now = Date()
-            
+
+            // Her plan dönemi için hesaplama yap
             history.forEach { entry ->
                 val endDate = entry.endDate ?: now
                 val startDate = entry.startDate
-                
-                // Bu plan dönemindeki ay sayısını hesapla
-                val diffInMillis = endDate.time - startDate.time
-                val months = (diffInMillis / (1000.0 * 60 * 60 * 24 * 30)).toInt()
-                
-                // Bu plan dönemindeki toplam harcamayı ekle
-                total += entry.price * (months + 1)
+
+                // Başlangıç ve bitiş tarihleri arasındaki ay farkını hesapla
+                val startCalendar = Calendar.getInstance().apply { time = startDate }
+                val endCalendar = Calendar.getInstance().apply { time = endDate }
+
+                val yearDiff = endCalendar.get(Calendar.YEAR) - startCalendar.get(Calendar.YEAR)
+                var monthDiff = endCalendar.get(Calendar.MONTH) - startCalendar.get(Calendar.MONTH) + (yearDiff * 12)
+
+                // Gün bazında düzeltme
+                if (endCalendar.get(Calendar.DAY_OF_MONTH) < startCalendar.get(Calendar.DAY_OF_MONTH)) {
+                    monthDiff--
+                }
+
+                // En az 1 ay sayılacak şekilde ayarlama
+                val effectiveMonths = maxOf(1, monthDiff)
+
+                // Ödeme periyoduna göre toplam ödeme sayısını hesapla
+                val payments = when (sub.paymentPeriod) {
+                    PaymentPeriod.MONTHLY -> effectiveMonths
+                    PaymentPeriod.QUARTERLY -> ((effectiveMonths - 1) / 3) + 1
+                    PaymentPeriod.YEARLY -> ((effectiveMonths - 1) / 12) + 1
+                }
+
+                // Bu dönem için toplam harcama
+                val planTotal = entry.price * payments
+                total += planTotal
+
+                println("""
+                    Plan Detayları:
+                    Plan: ${entry.plan}
+                    Başlangıç: ${formatDate(startDate)}
+                    Bitiş: ${formatDate(endDate)}
+                    Fiyat: ${entry.price}
+                    Ay Farkı: $monthDiff
+                    Efektif Ay: $effectiveMonths
+                    Ödeme Sayısı: $payments
+                    Dönem Toplamı: $planTotal
+                    Ara Toplam: $total
+                    ------------------------
+                """.trimIndent())
             }
-            
+
+            // Plan geçmişi boşsa mevcut planı kullan
+            if (history.isEmpty()) {
+                val startCalendar = Calendar.getInstance().apply { time = sub.startDate }
+                val endCalendar = Calendar.getInstance().apply { time = now }
+                
+                val months = ((endCalendar.timeInMillis - startCalendar.timeInMillis) / 
+                    (1000L * 60 * 60 * 24 * 30)).toInt()
+                
+                val payments = when (sub.paymentPeriod) {
+                    PaymentPeriod.MONTHLY -> months
+                    PaymentPeriod.QUARTERLY -> (months + 2) / 3
+                    PaymentPeriod.YEARLY -> (months + 11) / 12
+                }
+
+                total = sub.price * maxOf(1, payments)
+
+                println("""
+                    Plan Geçmişi Boş - Mevcut Plan Kullanılıyor
+                    Başlangıç: ${formatDate(sub.startDate)}
+                    Fiyat: ${sub.price}
+                    Ay Sayısı: $months
+                    Ödeme Sayısı: $payments
+                    Toplam: $total
+                """.trimIndent())
+            }
+
             totalSpent = total
+            println("Final Toplam: $totalSpent")
         }
     }
 
@@ -450,108 +516,179 @@ fun SubscriptionDetailScreen(
                                 )
 
                                 planHistory.forEachIndexed { index, entry ->
-                                    Card(
+                                    Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (entry.endDate == null)
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            else
-                                                MaterialTheme.colorScheme.surface
-                                        )
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
+                                        // Timeline çizgisi ve nokta
                                         Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(12.dp)
+                                                    .background(
+                                                        if (entry.endDate == null) 
+                                                            MaterialTheme.colorScheme.primary
+                                                        else 
+                                                            MaterialTheme.colorScheme.surfaceVariant,
+                                                        shape = CircleShape
+                                                    )
+                                            )
+                                            if (index < planHistory.size - 1) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(2.dp)
+                                                        .height(120.dp)
+                                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                )
+                                            }
+                                        }
+
+                                        // Plan detayları
+                                        Card(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .weight(1f),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = if (entry.endDate == null && index == planHistory.size - 1)
+                                                    MaterialTheme.colorScheme.primaryContainer
+                                                else
+                                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                            )
                                         ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
-                                                Column {
+                                                // Plan başlığı ve durum
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
                                                     Text(
                                                         text = entry.plan,
                                                         style = MaterialTheme.typography.titleSmall,
                                                         fontWeight = FontWeight.Medium
                                                     )
+                                                    if (entry.endDate == null && index == planHistory.size - 1) {
+                                                        Card(
+                                                            colors = CardDefaults.cardColors(
+                                                                containerColor = MaterialTheme.colorScheme.primary
+                                                            )
+                                                        ) {
+                                                            Text(
+                                                                text = "Aktif Plan",
+                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onPrimary
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                // Fiyat ve periyot
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
                                                     Text(
                                                         text = formatCurrency(entry.price),
-                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        style = MaterialTheme.typography.titleMedium,
                                                         color = MaterialTheme.colorScheme.primary
                                                     )
+                                                    Text(
+                                                        text = when(sub.paymentPeriod) {
+                                                            PaymentPeriod.MONTHLY -> "Aylık"
+                                                            PaymentPeriod.QUARTERLY -> "3 Aylık"
+                                                            PaymentPeriod.YEARLY -> "Yıllık"
+                                                        },
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
                                                 }
-                                                if (entry.endDate == null) {
-                                                    Card(
-                                                        colors = CardDefaults.cardColors(
-                                                            containerColor = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    ) {
+
+                                                Divider(modifier = Modifier.padding(vertical = 4.dp))
+
+                                                // Tarih bilgileri
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Column {
                                                         Text(
-                                                            text = "Aktif Plan",
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.onPrimary
+                                                            text = "Başlangıç",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        Text(
+                                                            text = formatDate(entry.startDate),
+                                                            style = MaterialTheme.typography.bodyMedium
+                                                        )
+                                                    }
+                                                    Column(horizontalAlignment = Alignment.End) {
+                                                        Text(
+                                                            text = if (entry.endDate == null) "Devam Ediyor" else "Bitiş",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        Text(
+                                                            text = entry.endDate?.let { formatDate(it) } ?: "—",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = if (entry.endDate == null) 
+                                                                MaterialTheme.colorScheme.primary 
+                                                            else 
+                                                                MaterialTheme.colorScheme.onSurface
                                                         )
                                                     }
                                                 }
-                                            }
 
-                                            Spacer(modifier = Modifier.height(8.dp))
+                                                // Değişim bilgisi
+                                                if (index > 0) {
+                                                    val previousPlan = planHistory[index - 1]
+                                                    val priceChange = entry.price - previousPlan.price
+                                                    val priceChangePercent = (priceChange / previousPlan.price) * 100
 
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Text(
-                                                    text = formatDate(entry.startDate),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Text(
-                                                    text = " → ",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Text(
-                                                    text = entry.endDate?.let { formatDate(it) } ?: "Devam ediyor",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (entry.endDate == null)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-
-                                            val duration = if (entry.endDate != null) {
-                                                val months = ((entry.endDate.time - entry.startDate.time) / 
-                                                    (1000L * 60 * 60 * 24 * 30)).toInt()
-                                                when {
-                                                    months >= 12 -> "${months / 12} yıl ${months % 12} ay"
-                                                    months > 0 -> "$months ay"
-                                                    else -> "1 aydan az"
-                                                }
-                                            } else {
-                                                val months = ((Date().time - entry.startDate.time) / 
-                                                    (1000L * 60 * 60 * 24 * 30)).toInt()
-                                                when {
-                                                    months >= 12 -> "${months / 12} yıl ${months % 12} ay"
-                                                    months > 0 -> "$months ay"
-                                                    else -> "1 aydan az"
+                                                    Card(
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = if (priceChange > 0)
+                                                                Color(0xFFFFEBEE)
+                                                            else
+                                                                Color(0xFFE8F5E9)
+                                                        ),
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                        ) {
+                                                            Text(
+                                                                text = if (priceChange > 0) "Fiyat Artışı" else "Fiyat Düşüşü",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = if (priceChange > 0) 
+                                                                    Color(0xFFE57373) 
+                                                                else 
+                                                                    Color(0xFF81C784)
+                                                            )
+                                                            Text(
+                                                                text = "${if (priceChange > 0) "+" else ""}${formatCurrency(priceChange)} (${String.format("%.1f", priceChangePercent)}%)",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = if (priceChange > 0) 
+                                                                    Color(0xFFE57373) 
+                                                                else 
+                                                                    Color(0xFF81C784)
+                                                            )
+                                                        }
+                                                    }
                                                 }
                                             }
-
-                                            Text(
-                                                text = "Süre: $duration",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.padding(top = 4.dp)
-                                            )
                                         }
-                                    }
-
-                                    if (index < planHistory.size - 1) {
-                                        Spacer(modifier = Modifier.height(8.dp))
                                     }
                                 }
                             }

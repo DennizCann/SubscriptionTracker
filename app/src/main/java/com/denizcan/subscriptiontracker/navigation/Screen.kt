@@ -12,4 +12,5 @@ sealed class Screen(val route: String) {
     object AddSubscription : Screen("add_subscription")
     object AddPredefinedSubscription : Screen("add_predefined_subscription/{subscriptionId}")
     object SubscriptionDetail : Screen("subscription_detail")
+    object Settings : Screen("settings")
 } 

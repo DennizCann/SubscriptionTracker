@@ -382,43 +382,46 @@ class SubscriptionViewModel : ViewModel() {
                     return@launch
                 }
 
-                // Mevcut planı geçmiş planlara ekle
-                val currentPlan = PlanHistoryEntry(
-                    plan = data["plan"] as String,
-                    price = (data["price"] as Number).toDouble(),
-                    startDate = (data["startDate"] as com.google.firebase.Timestamp).toDate(),
-                    endDate = effectiveDate
-                )
-
-                // Yeni planı oluştur
-                val newPlanEntry = PlanHistoryEntry(
-                    plan = newPlan,
-                    price = newPrice,
-                    startDate = effectiveDate,
-                    endDate = null
-                )
+                // Önce mevcut plan geçmişini al
+                val planHistoryRef = docRef.collection("planHistory")
+                val existingPlans = planHistoryRef.get().await().documents
+                    .mapNotNull { doc ->
+                        val planData = doc.data ?: return@mapNotNull null
+                        PlanHistoryEntry(
+                            plan = planData["plan"] as String,
+                            price = (planData["price"] as Number).toDouble(),
+                            startDate = (planData["startDate"] as com.google.firebase.Timestamp).toDate(),
+                            endDate = (planData["endDate"] as? com.google.firebase.Timestamp)?.toDate()
+                        )
+                    }
+                    .sortedBy { it.startDate }
 
                 // Batch işlemi başlat
                 val batch = firestore.batch()
 
-                // Plan geçmişini güncelle
-                val planHistoryRef = docRef.collection("planHistory")
-                
-                // Mevcut planı geçmişe ekle
-                val currentPlanDoc = planHistoryRef.document()
-                batch.set(currentPlanDoc, hashMapOf(
-                    "plan" to currentPlan.plan,
-                    "price" to currentPlan.price,
-                    "startDate" to com.google.firebase.Timestamp(currentPlan.startDate),
-                    "endDate" to com.google.firebase.Timestamp(currentPlan.endDate!!)
-                ))
+                // Eğer mevcut aktif plan varsa, bitiş tarihini güncelle
+                val activePlan = existingPlans.lastOrNull { it.endDate == null }
+                if (activePlan != null) {
+                    // Aktif planın dokümanını bul
+                    val activePlanDoc = planHistoryRef.get().await().documents
+                        .firstOrNull { doc ->
+                            val data = doc.data
+                            data?.get("plan") == activePlan.plan &&
+                            data["endDate"] == null
+                        }
+                    
+                    // Aktif planın bitiş tarihini güncelle
+                    activePlanDoc?.let {
+                        batch.update(it.reference, "endDate", com.google.firebase.Timestamp(effectiveDate))
+                    }
+                }
 
                 // Yeni planı ekle
                 val newPlanDoc = planHistoryRef.document()
                 batch.set(newPlanDoc, hashMapOf(
-                    "plan" to newPlanEntry.plan,
-                    "price" to newPlanEntry.price,
-                    "startDate" to com.google.firebase.Timestamp(newPlanEntry.startDate),
+                    "plan" to newPlan,
+                    "price" to newPrice,
+                    "startDate" to com.google.firebase.Timestamp(effectiveDate),
                     "endDate" to null
                 ))
 
@@ -477,7 +480,7 @@ class SubscriptionViewModel : ViewModel() {
             .get()
             .await()
 
-        return planHistorySnapshot.documents
+        val allEntries = planHistorySnapshot.documents
             .mapNotNull { doc ->
                 val data = doc.data ?: return@mapNotNull null
                 PlanHistoryEntry(
@@ -488,5 +491,28 @@ class SubscriptionViewModel : ViewModel() {
                 )
             }
             .sortedBy { it.startDate }
+
+        // Ardışık aynı planları birleştir
+        val mergedEntries = mutableListOf<PlanHistoryEntry>()
+        var currentEntry: PlanHistoryEntry? = null
+
+        for (entry in allEntries) {
+            if (currentEntry == null) {
+                currentEntry = entry
+            } else if (currentEntry.plan == entry.plan && 
+                      currentEntry.price == entry.price && 
+                      currentEntry.endDate?.time == entry.startDate.time) {
+                // Aynı plan ve fiyata sahip, tarihleri birleştir
+                currentEntry = currentEntry.copy(endDate = entry.endDate)
+            } else {
+                mergedEntries.add(currentEntry)
+                currentEntry = entry
+            }
+        }
+        
+        // Son entry'i ekle
+        currentEntry?.let { mergedEntries.add(it) }
+
+        return mergedEntries
     }
 } 

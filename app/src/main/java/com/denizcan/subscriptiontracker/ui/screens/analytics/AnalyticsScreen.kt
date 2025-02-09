@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.github.mikephil.charting.charts.LineChart
@@ -86,13 +87,6 @@ fun AnalyticsScreen(
 
                     item {
                         SubscriptionStatsCard(
-                            subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-
-                    item {
-                        FutureExpenseCard(
                             subscriptions = state.subscriptions,
                             modifier = Modifier.padding(16.dp)
                         )
@@ -403,23 +397,31 @@ fun SubscriptionStatsCard(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            StatItem(
-                icon = Icons.Default.List,
-                label = "Toplam Üyelik",
-                value = totalSubscriptions.toString()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    icon = Icons.Default.List,
+                    label = "Toplam Üyelik",
+                    value = totalSubscriptions.toString(),
+                    modifier = Modifier.weight(1f)
+                )
 
-            StatItem(
-                icon = Icons.Default.Info,
-                label = "Ortalama Aylık Maliyet",
-                value = formatCurrency(averageExpense)
-            )
+                StatItem(
+                    icon = Icons.Default.Info,
+                    label = "Ort. Aylık Maliyet",
+                    value = formatCurrency(averageExpense),
+                    modifier = Modifier.weight(1f)
+                )
 
-            StatItem(
-                icon = Icons.Default.CheckCircle,
-                label = "En Yüksek Kategori",
-                value = mostExpensiveCategory?.displayName ?: "-"
-            )
+                StatItem(
+                    icon = Icons.Default.CheckCircle,
+                    label = "En Yüksek Kategori",
+                    value = mostExpensiveCategory?.displayName ?: "-",
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
@@ -428,72 +430,34 @@ fun SubscriptionStatsCard(
 fun StatItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    value: String
+    value: String,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            modifier = Modifier.fillMaxWidth()
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            modifier = Modifier.fillMaxWidth()
         )
-    }
-}
-
-@Composable
-fun FutureExpenseCard(
-    subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
-) {
-    val monthlyTotal = subscriptions.sumOf { it.price }
-    val nextMonthEstimate = monthlyTotal * 1.1 // %10 artış tahmini
-
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Gelecek Ay Tahmini",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Tahmini Harcama",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = formatCurrency(nextMonthEstimate),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-
-                Card(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Text(
-                        text = "+10%",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-        }
     }
 }
 
