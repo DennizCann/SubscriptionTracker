@@ -49,8 +49,9 @@ fun SubscriptionDetailScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var planHistory by remember { mutableStateOf<List<PlanHistoryEntry>>(emptyList()) }
     var totalSpent by remember { mutableDoubleStateOf(0.0) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(subscription) {
+    LaunchedEffect(subscription, isRefreshing) {
         subscription?.let { sub ->
             editedName = sub.name
             editedPlan = sub.plan
@@ -60,90 +61,90 @@ fun SubscriptionDetailScreen(
             editedStartDate = sub.startDate
 
             // Plan geçmişini al
-            val history = viewModel.getPlanHistory(sub.id)
-            planHistory = history
+            viewModel.getPlanHistory(sub.id).collect { history ->
+                planHistory = history
+                println("Plan Geçmişi Yüklendi - Üyelik: ${sub.name}")
+                println("Geçmiş Kayıt Sayısı: ${history.size}")
 
-            println("Plan Geçmişi Yüklendi - Üyelik: ${sub.name}")
-            println("Geçmiş Kayıt Sayısı: ${history.size}")
+                // Toplam harcamayı hesapla
+                var total = 0.0
+                val now = Date()
 
-            // Toplam harcamayı hesapla
-            var total = 0.0
-            val now = Date()
+                // Her plan dönemi için hesaplama yap
+                history.forEach { entry ->
+                    val endDate = entry.endDate ?: now
+                    val startDate = entry.startDate
 
-            // Her plan dönemi için hesaplama yap
-            history.forEach { entry ->
-                val endDate = entry.endDate ?: now
-                val startDate = entry.startDate
+                    // Başlangıç ve bitiş tarihleri arasındaki ay farkını hesapla
+                    val startCalendar = Calendar.getInstance().apply { time = startDate }
+                    val endCalendar = Calendar.getInstance().apply { time = endDate }
 
-                // Başlangıç ve bitiş tarihleri arasındaki ay farkını hesapla
-                val startCalendar = Calendar.getInstance().apply { time = startDate }
-                val endCalendar = Calendar.getInstance().apply { time = endDate }
+                    val yearDiff = endCalendar.get(Calendar.YEAR) - startCalendar.get(Calendar.YEAR)
+                    var monthDiff = endCalendar.get(Calendar.MONTH) - startCalendar.get(Calendar.MONTH) + (yearDiff * 12)
 
-                val yearDiff = endCalendar.get(Calendar.YEAR) - startCalendar.get(Calendar.YEAR)
-                var monthDiff = endCalendar.get(Calendar.MONTH) - startCalendar.get(Calendar.MONTH) + (yearDiff * 12)
+                    // Gün bazında düzeltme
+                    if (endCalendar.get(Calendar.DAY_OF_MONTH) < startCalendar.get(Calendar.DAY_OF_MONTH)) {
+                        monthDiff--
+                    }
 
-                // Gün bazında düzeltme
-                if (endCalendar.get(Calendar.DAY_OF_MONTH) < startCalendar.get(Calendar.DAY_OF_MONTH)) {
-                    monthDiff--
+                    // En az 1 ay sayılacak şekilde ayarlama
+                    val effectiveMonths = maxOf(1, monthDiff)
+
+                    // Ödeme periyoduna göre toplam ödeme sayısını hesapla
+                    val payments = when (sub.paymentPeriod) {
+                        PaymentPeriod.MONTHLY -> effectiveMonths
+                        PaymentPeriod.QUARTERLY -> ((effectiveMonths - 1) / 3) + 1
+                        PaymentPeriod.YEARLY -> ((effectiveMonths - 1) / 12) + 1
+                    }
+
+                    // Bu dönem için toplam harcama
+                    val planTotal = entry.price * payments
+                    total += planTotal
+
+                    println("""
+                        Plan Detayları:
+                        Plan: ${entry.plan}
+                        Başlangıç: ${formatDate(startDate)}
+                        Bitiş: ${formatDate(endDate)}
+                        Fiyat: ${entry.price}
+                        Ay Farkı: $monthDiff
+                        Efektif Ay: $effectiveMonths
+                        Ödeme Sayısı: $payments
+                        Dönem Toplamı: $planTotal
+                        Ara Toplam: $total
+                        ------------------------
+                    """.trimIndent())
                 }
 
-                // En az 1 ay sayılacak şekilde ayarlama
-                val effectiveMonths = maxOf(1, monthDiff)
+                // Plan geçmişi boşsa mevcut planı kullan
+                if (history.isEmpty()) {
+                    val startCalendar = Calendar.getInstance().apply { time = sub.startDate }
+                    val endCalendar = Calendar.getInstance().apply { time = now }
+                    
+                    val months = ((endCalendar.timeInMillis - startCalendar.timeInMillis) / 
+                        (1000L * 60 * 60 * 24 * 30)).toInt()
+                    
+                    val payments = when (sub.paymentPeriod) {
+                        PaymentPeriod.MONTHLY -> months
+                        PaymentPeriod.QUARTERLY -> (months + 2) / 3
+                        PaymentPeriod.YEARLY -> (months + 11) / 12
+                    }
 
-                // Ödeme periyoduna göre toplam ödeme sayısını hesapla
-                val payments = when (sub.paymentPeriod) {
-                    PaymentPeriod.MONTHLY -> effectiveMonths
-                    PaymentPeriod.QUARTERLY -> ((effectiveMonths - 1) / 3) + 1
-                    PaymentPeriod.YEARLY -> ((effectiveMonths - 1) / 12) + 1
+                    total = sub.price * maxOf(1, payments)
+
+                    println("""
+                        Plan Geçmişi Boş - Mevcut Plan Kullanılıyor
+                        Başlangıç: ${formatDate(sub.startDate)}
+                        Fiyat: ${sub.price}
+                        Ay Sayısı: $months
+                        Ödeme Sayısı: $payments
+                        Toplam: $total
+                    """.trimIndent())
                 }
 
-                // Bu dönem için toplam harcama
-                val planTotal = entry.price * payments
-                total += planTotal
-
-                println("""
-                    Plan Detayları:
-                    Plan: ${entry.plan}
-                    Başlangıç: ${formatDate(startDate)}
-                    Bitiş: ${formatDate(endDate)}
-                    Fiyat: ${entry.price}
-                    Ay Farkı: $monthDiff
-                    Efektif Ay: $effectiveMonths
-                    Ödeme Sayısı: $payments
-                    Dönem Toplamı: $planTotal
-                    Ara Toplam: $total
-                    ------------------------
-                """.trimIndent())
+                totalSpent = total
+                println("Final Toplam: $totalSpent")
             }
-
-            // Plan geçmişi boşsa mevcut planı kullan
-            if (history.isEmpty()) {
-                val startCalendar = Calendar.getInstance().apply { time = sub.startDate }
-                val endCalendar = Calendar.getInstance().apply { time = now }
-                
-                val months = ((endCalendar.timeInMillis - startCalendar.timeInMillis) / 
-                    (1000L * 60 * 60 * 24 * 30)).toInt()
-                
-                val payments = when (sub.paymentPeriod) {
-                    PaymentPeriod.MONTHLY -> months
-                    PaymentPeriod.QUARTERLY -> (months + 2) / 3
-                    PaymentPeriod.YEARLY -> (months + 11) / 12
-                }
-
-                total = sub.price * maxOf(1, payments)
-
-                println("""
-                    Plan Geçmişi Boş - Mevcut Plan Kullanılıyor
-                    Başlangıç: ${formatDate(sub.startDate)}
-                    Fiyat: ${sub.price}
-                    Ay Sayısı: $months
-                    Ödeme Sayısı: $payments
-                    Toplam: $total
-                """.trimIndent())
-            }
-
-            totalSpent = total
-            println("Final Toplam: $totalSpent")
         }
     }
 
@@ -268,9 +269,10 @@ fun SubscriptionDetailScreen(
                                 subscriptionId = sub.id,
                                 newPlan = upgradedPlan,
                                 newPrice = newPrice,
-                                effectiveDate = selectedUpgradeDate
+                                upgradeDate = selectedUpgradeDate
                             )
                             showUpgradePlanDialog = false
+                            isRefreshing = !isRefreshing
                         }
                     ) {
                         Text("Yükselt")
@@ -375,6 +377,7 @@ fun SubscriptionDetailScreen(
                         )
                         viewModel.updateSubscription(updatedSubscription)
                         showEditDialog = false
+                        isRefreshing = !isRefreshing
                     }
                 ) {
                     Text("Kaydet")

@@ -195,9 +195,10 @@ class SubscriptionViewModel : ViewModel() {
                 println("Üyelik ekleniyor - Kullanıcı ID: $userId")
 
                 val nextPaymentDate = calculateNextPaymentDate(startDate, paymentPeriod)
+                val subscriptionId = UUID.randomUUID().toString()
                 
                 val subscription = Subscription(
-                    id = UUID.randomUUID().toString(),
+                    id = subscriptionId,
                     name = name,
                     plan = plan,
                     price = price,
@@ -218,12 +219,22 @@ class SubscriptionViewModel : ViewModel() {
                 )
 
                 try {
+                    // Önce aboneliği kaydet
                     firestore.collection("users")
                         .document(userId)
                         .collection("subscriptions")
                         .document(subscription.id)
                         .set(subscriptionMap)
                         .await()
+
+                    // Sonra ilk plan geçmişini oluştur
+                    createInitialPlanHistory(
+                        userId = userId,
+                        subscriptionId = subscription.id,
+                        plan = plan,
+                        price = price,
+                        startDate = startDate
+                    )
 
                     println("Üyelik başarıyla kaydedildi - ID: ${subscription.id}")
                     loadSubscriptions()
@@ -297,7 +308,20 @@ class SubscriptionViewModel : ViewModel() {
                     .update(subscriptionMap.toMap())
                     .await()
 
-                loadSubscriptions() // Listeyi yenile
+                // State'i hemen güncelle
+                val currentState = subscriptionState.value
+                if (currentState is SubscriptionState.Success) {
+                    val updatedSubscriptions = currentState.subscriptions.map { 
+                        if (it.id == subscription.id) subscription else it 
+                    }
+                    _subscriptionState.value = SubscriptionState.Success(
+                        subscriptions = updatedSubscriptions,
+                        totalMonthlyExpense = calculateMonthlyTotal(updatedSubscriptions),
+                        upcomingPayment = findUpcomingPayment(updatedSubscriptions)
+                    )
+                }
+
+                loadSubscriptions() // Arka planda tam listeyi yenile
             } catch (e: Exception) {
                 _subscriptionState.value = SubscriptionState.Error(e.message ?: "Üyelik güncellenemedi")
             }
@@ -354,165 +378,231 @@ class SubscriptionViewModel : ViewModel() {
         subscriptionId: String,
         newPlan: String,
         newPrice: Double,
-        effectiveDate: Date
+        upgradeDate: Date
     ) {
         viewModelScope.launch {
             try {
-                val userId = auth.currentUser?.uid
-                if (userId == null) {
-                    _subscriptionState.value = SubscriptionState.Error("Oturum açık değil")
-                    return@launch
+                val userId = auth.currentUser?.uid ?: throw Exception("Kullanıcı oturum açmamış")
+                
+                // Önce mevcut plan geçmişini al ve son planın bitiş tarihini güncelle
+                val planHistorySnapshot = firestore.collection("users")
+                    .document(userId)
+                    .collection("subscriptions")
+                    .document(subscriptionId)
+                    .collection("planHistory")
+                    .orderBy("startDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                    .limit(1)
+                    .get()
+                    .await()
+
+                if (!planHistorySnapshot.isEmpty) {
+                    val lastPlanDoc = planHistorySnapshot.documents.first()
+                    // Son planın bitiş tarihini güncelle
+                    firestore.collection("users")
+                        .document(userId)
+                        .collection("subscriptions")
+                        .document(subscriptionId)
+                        .collection("planHistory")
+                        .document(lastPlanDoc.id)
+                        .update("endDate", com.google.firebase.Timestamp(upgradeDate))
+                        .await()
                 }
 
-                // Mevcut aboneliği al
+                // Yeni plan geçmişi ekle
+                val newHistoryEntry = hashMapOf(
+                    "plan" to newPlan,
+                    "price" to newPrice,
+                    "startDate" to com.google.firebase.Timestamp(upgradeDate),
+                    "endDate" to null
+                )
+
+                firestore.collection("users")
+                    .document(userId)
+                    .collection("subscriptions")
+                    .document(subscriptionId)
+                    .collection("planHistory")
+                    .add(newHistoryEntry)
+                    .await()
+
+                // Aboneliği güncelle
+                val updates = hashMapOf<String, Any>(
+                    "plan" to newPlan,
+                    "price" to newPrice,
+                    "startDate" to com.google.firebase.Timestamp(upgradeDate)
+                )
+
+                firestore.collection("users")
+                    .document(userId)
+                    .collection("subscriptions")
+                    .document(subscriptionId)
+                    .update(updates)
+                    .await()
+
+                // Subscription'ı yenile
                 val docRef = firestore.collection("users")
                     .document(userId)
                     .collection("subscriptions")
                     .document(subscriptionId)
+                    .get()
+                    .await()
 
-                val snapshot = docRef.get().await()
-                if (!snapshot.exists()) {
-                    _subscriptionState.value = SubscriptionState.Error("Abonelik bulunamadı")
-                    return@launch
-                }
+                if (docRef.exists()) {
+                    val data = docRef.data
+                    if (data != null) {
+                        val updatedSubscription = Subscription(
+                            id = docRef.id,
+                            name = data["name"] as? String ?: "",
+                            plan = data["plan"] as? String ?: "",
+                            price = (data["price"] as? Number)?.toDouble() ?: 0.0,
+                            category = try {
+                                SubscriptionCategory.valueOf(data["category"] as? String ?: SubscriptionCategory.OTHER.name)
+                            } catch (e: Exception) {
+                                SubscriptionCategory.OTHER
+                            },
+                            startDate = (data["startDate"] as? com.google.firebase.Timestamp)?.toDate() ?: Date(),
+                            nextPaymentDate = (data["nextPaymentDate"] as? com.google.firebase.Timestamp)?.toDate() ?: Date(),
+                            paymentPeriod = try {
+                                PaymentPeriod.valueOf(data["paymentPeriod"] as? String ?: PaymentPeriod.MONTHLY.name)
+                            } catch (e: Exception) {
+                                PaymentPeriod.MONTHLY
+                            }
+                        )
 
-                val data = snapshot.data
-                if (data == null) {
-                    _subscriptionState.value = SubscriptionState.Error("Abonelik verisi bulunamadı")
-                    return@launch
-                }
+                        // Plan geçmişini al
+                        val planHistorySnapshot = firestore.collection("users")
+                            .document(userId)
+                            .collection("subscriptions")
+                            .document(subscriptionId)
+                            .collection("planHistory")
+                            .orderBy("startDate")
+                            .get()
+                            .await()
 
-                // Önce mevcut plan geçmişini al
-                val planHistoryRef = docRef.collection("planHistory")
-                val existingPlans = planHistoryRef.get().await().documents
-                    .mapNotNull { doc ->
-                        val planData = doc.data ?: return@mapNotNull null
-                        PlanHistoryEntry(
-                            plan = planData["plan"] as String,
-                            price = (planData["price"] as Number).toDouble(),
-                            startDate = (planData["startDate"] as com.google.firebase.Timestamp).toDate(),
-                            endDate = (planData["endDate"] as? com.google.firebase.Timestamp)?.toDate()
+                        val planHistory = planHistorySnapshot.documents.mapNotNull { doc ->
+                            try {
+                                val historyData = doc.data ?: return@mapNotNull null
+                                PlanHistoryEntry(
+                                    plan = historyData["plan"] as? String ?: return@mapNotNull null,
+                                    price = (historyData["price"] as? Number)?.toDouble() ?: return@mapNotNull null,
+                                    startDate = (historyData["startDate"] as? com.google.firebase.Timestamp)?.toDate() ?: return@mapNotNull null,
+                                    endDate = (historyData["endDate"] as? com.google.firebase.Timestamp)?.toDate()
+                                )
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        // State'i güncelle
+                        _subscriptionState.value = SubscriptionState.Success(
+                            subscriptions = (subscriptionState.value as? SubscriptionState.Success)?.subscriptions?.map {
+                                if (it.id == subscriptionId) updatedSubscription else it
+                            } ?: listOf(updatedSubscription),
+                            totalMonthlyExpense = calculateMonthlyTotal((subscriptionState.value as? SubscriptionState.Success)?.subscriptions ?: emptyList()),
+                            upcomingPayment = findUpcomingPayment((subscriptionState.value as? SubscriptionState.Success)?.subscriptions ?: emptyList())
                         )
                     }
-                    .sortedBy { it.startDate }
-
-                // Batch işlemi başlat
-                val batch = firestore.batch()
-
-                // Eğer mevcut aktif plan varsa, bitiş tarihini güncelle
-                val activePlan = existingPlans.lastOrNull { it.endDate == null }
-                if (activePlan != null) {
-                    // Aktif planın dokümanını bul
-                    val activePlanDoc = planHistoryRef.get().await().documents
-                        .firstOrNull { doc ->
-                            val data = doc.data
-                            data?.get("plan") == activePlan.plan &&
-                            data["endDate"] == null
-                        }
-                    
-                    // Aktif planın bitiş tarihini güncelle
-                    activePlanDoc?.let {
-                        batch.update(it.reference, "endDate", com.google.firebase.Timestamp(effectiveDate))
-                    }
                 }
 
-                // Yeni planı ekle
-                val newPlanDoc = planHistoryRef.document()
-                batch.set(newPlanDoc, hashMapOf(
-                    "plan" to newPlan,
-                    "price" to newPrice,
-                    "startDate" to com.google.firebase.Timestamp(effectiveDate),
-                    "endDate" to null
-                ))
-
-                // Ana abonelik dokümanını güncelle
-                batch.update(docRef, hashMapOf<String, Any>(
-                    "plan" to newPlan,
-                    "price" to newPrice,
-                    "lastUpgradeDate" to com.google.firebase.Timestamp(effectiveDate)
-                ))
-
-                // Batch işlemini uygula
-                batch.commit().await()
-
-                loadSubscriptions() // Listeyi yenile
+                loadSubscriptions()
             } catch (e: Exception) {
-                _subscriptionState.value = SubscriptionState.Error(e.message ?: "Plan yükseltme işlemi başarısız oldu")
+                println("Plan yükseltme hatası: ${e.message}")
+                _subscriptionState.value = SubscriptionState.Error(e.message ?: "Plan yükseltilirken bir hata oluştu")
             }
         }
     }
 
-    // Belirli bir tarihte geçerli olan plan ve fiyatı bul
-    suspend fun getEffectivePlanForDate(subscriptionId: String, date: Date): PlanHistoryEntry? {
-        val userId = auth.currentUser?.uid ?: return null
-        
-        val planHistorySnapshot = firestore.collection("users")
+    // Yeni abonelik eklerken ilk plan geçmişini de oluştur
+    private suspend fun createInitialPlanHistory(
+        userId: String,
+        subscriptionId: String,
+        plan: String,
+        price: Double,
+        startDate: Date
+    ) {
+        val historyEntry = hashMapOf(
+            "plan" to plan,
+            "price" to price,
+            "startDate" to com.google.firebase.Timestamp(startDate),
+            "endDate" to null
+        )
+
+        firestore.collection("users")
             .document(userId)
             .collection("subscriptions")
             .document(subscriptionId)
             .collection("planHistory")
-            .get()
+            .add(historyEntry)
             .await()
+    }
 
-        return planHistorySnapshot.documents
-            .mapNotNull { doc ->
-                val data = doc.data ?: return@mapNotNull null
-                PlanHistoryEntry(
-                    plan = data["plan"] as String,
-                    price = (data["price"] as Number).toDouble(),
-                    startDate = (data["startDate"] as com.google.firebase.Timestamp).toDate(),
-                    endDate = (data["endDate"] as? com.google.firebase.Timestamp)?.toDate()
-                )
+    fun getPlanHistory(subscriptionId: String): Flow<List<PlanHistoryEntry>> = flow {
+        try {
+            val userId = auth.currentUser?.uid ?: throw Exception("Kullanıcı oturum açmamış")
+            
+            val snapshot = firestore.collection("users")
+                .document(userId)
+                .collection("subscriptions")
+                .document(subscriptionId)
+                .collection("planHistory")
+                .orderBy("startDate")
+                .get()
+                .await()
+
+            val history = snapshot.documents.mapNotNull { doc ->
+                try {
+                    val data = doc.data ?: return@mapNotNull null
+                    PlanHistoryEntry(
+                        plan = data["plan"] as? String ?: return@mapNotNull null,
+                        price = (data["price"] as? Number)?.toDouble() ?: return@mapNotNull null,
+                        startDate = (data["startDate"] as? com.google.firebase.Timestamp)?.toDate() ?: return@mapNotNull null,
+                        endDate = (data["endDate"] as? com.google.firebase.Timestamp)?.toDate()
+                    )
+                } catch (e: Exception) {
+                    println("Plan geçmişi dönüştürme hatası: ${e.message}")
+                    null
+                }
             }
-            .firstOrNull { entry ->
+            emit(history)
+        } catch (e: Exception) {
+            println("Plan geçmişi yükleme hatası: ${e.message}")
+            emit(emptyList())
+        }
+    }
+
+    fun getEffectivePlanForDate(subscriptionId: String, date: Date): Flow<PlanHistoryEntry?> = flow {
+        try {
+            val userId = auth.currentUser?.uid ?: throw Exception("Kullanıcı oturum açmamış")
+            
+            val snapshot = firestore.collection("users")
+                .document(userId)
+                .collection("subscriptions")
+                .document(subscriptionId)
+                .collection("planHistory")
+                .orderBy("startDate")
+                .get()
+                .await()
+
+            val effectivePlan = snapshot.documents.mapNotNull { doc ->
+                try {
+                    val data = doc.data ?: return@mapNotNull null
+                    PlanHistoryEntry(
+                        plan = data["plan"] as? String ?: return@mapNotNull null,
+                        price = (data["price"] as? Number)?.toDouble() ?: return@mapNotNull null,
+                        startDate = (data["startDate"] as? com.google.firebase.Timestamp)?.toDate() ?: return@mapNotNull null,
+                        endDate = (data["endDate"] as? com.google.firebase.Timestamp)?.toDate()
+                    )
+                } catch (e: Exception) {
+                    println("Plan dönüştürme hatası: ${e.message}")
+                    null
+                }
+            }.firstOrNull { entry ->
                 date >= entry.startDate && (entry.endDate == null || date < entry.endDate)
             }
-    }
 
-    suspend fun getPlanHistory(subscriptionId: String): List<PlanHistoryEntry> {
-        val userId = auth.currentUser?.uid ?: return emptyList()
-        
-        val planHistorySnapshot = firestore.collection("users")
-            .document(userId)
-            .collection("subscriptions")
-            .document(subscriptionId)
-            .collection("planHistory")
-            .get()
-            .await()
-
-        val allEntries = planHistorySnapshot.documents
-            .mapNotNull { doc ->
-                val data = doc.data ?: return@mapNotNull null
-                PlanHistoryEntry(
-                    plan = data["plan"] as String,
-                    price = (data["price"] as Number).toDouble(),
-                    startDate = (data["startDate"] as com.google.firebase.Timestamp).toDate(),
-                    endDate = (data["endDate"] as? com.google.firebase.Timestamp)?.toDate()
-                )
-            }
-            .sortedBy { it.startDate }
-
-        // Ardışık aynı planları birleştir
-        val mergedEntries = mutableListOf<PlanHistoryEntry>()
-        var currentEntry: PlanHistoryEntry? = null
-
-        for (entry in allEntries) {
-            if (currentEntry == null) {
-                currentEntry = entry
-            } else if (currentEntry.plan == entry.plan && 
-                      currentEntry.price == entry.price && 
-                      currentEntry.endDate?.time == entry.startDate.time) {
-                // Aynı plan ve fiyata sahip, tarihleri birleştir
-                currentEntry = currentEntry.copy(endDate = entry.endDate)
-            } else {
-                mergedEntries.add(currentEntry)
-                currentEntry = entry
-            }
+            emit(effectivePlan)
+        } catch (e: Exception) {
+            println("Etkin plan alma hatası: ${e.message}")
+            emit(null)
         }
-        
-        // Son entry'i ekle
-        currentEntry?.let { mergedEntries.add(it) }
-
-        return mergedEntries
     }
 } 

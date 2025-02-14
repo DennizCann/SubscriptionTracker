@@ -22,6 +22,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.DatePicker
 import java.text.SimpleDateFormat
 import com.denizcan.subscriptiontracker.model.SubscriptionCategory
+import com.denizcan.subscriptiontracker.ui.components.DatePickerButton
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,12 +183,17 @@ fun AddSubscriptionScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Başlangıç tarihi seçici
-            OutlinedButton(
-                onClick = { showDatePicker = true },
-                modifier = Modifier.fillMaxWidth()
+            // Tarih seçiciler
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Başlangıç Tarihi: ${dateFormatter.format(startDate)}")
+                DatePickerButton(
+                    date = startDate,
+                    onDateSelected = { date ->
+                        startDate = date
+                    },
+                    label = "Başlangıç Tarihi"
+                )
             }
 
             if (showError) {

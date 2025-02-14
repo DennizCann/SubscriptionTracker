@@ -168,8 +168,10 @@ fun MonthlyTrendCard(
     
     // Plan geçmişlerini yükle
     LaunchedEffect(subscriptions) {
-        planHistoryMap = subscriptions.associate { subscription ->
-            subscription.id to viewModel.getPlanHistory(subscription.id)
+        subscriptions.forEach { subscription ->
+            viewModel.getPlanHistory(subscription.id).collect { history ->
+                planHistoryMap = planHistoryMap + (subscription.id to history)
+            }
         }
     }
     

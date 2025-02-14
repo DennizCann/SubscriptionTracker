@@ -35,9 +35,15 @@ fun CalendarScreen(
     LaunchedEffect(selectedDate, subscriptionState) {
         if (selectedDate != null && subscriptionState is SubscriptionState.Success) {
             val subscriptions = (subscriptionState as SubscriptionState.Success).subscriptions
-            effectivePlans = subscriptions.associate { subscription ->
-                subscription.id to viewModel.getEffectivePlanForDate(subscription.id, selectedDate!!)
+            val newEffectivePlans = mutableMapOf<String, PlanHistoryEntry?>()
+            
+            subscriptions.forEach { subscription ->
+                viewModel.getEffectivePlanForDate(subscription.id, selectedDate!!).collect { plan ->
+                    newEffectivePlans[subscription.id] = plan
+                }
             }
+            
+            effectivePlans = newEffectivePlans
         }
     }
     
