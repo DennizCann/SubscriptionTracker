@@ -101,16 +101,27 @@ fun ProfileScreen(
                             authViewModel.logout()
                             showLogoutDialog = false
                             onLogout()
-                        }
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
                     ) {
                         Text("Evet")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showLogoutDialog = false }) {
+                    TextButton(
+                        onClick = { showLogoutDialog = false },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
                         Text("İptal")
                     }
-                }
+                },
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -151,7 +162,10 @@ private fun StatisticsSection(
     val subscriptionState by subscriptionViewModel.subscriptionState.collectAsState()
     
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

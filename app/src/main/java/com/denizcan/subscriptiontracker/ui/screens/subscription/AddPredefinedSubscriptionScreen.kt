@@ -29,6 +29,10 @@ fun AddPredefinedSubscriptionScreen(
     var price by remember { mutableStateOf("") }
     var selectedPaymentPeriod by remember { mutableStateOf<PaymentPeriod>(PaymentPeriod.MONTHLY) }
     var startDate by remember { mutableStateOf(Date()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = startDate.time
+    )
 
     Scaffold(
         topBar = {
@@ -79,7 +83,11 @@ fun AddPredefinedSubscriptionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Servis bilgileri
-            Card {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -118,7 +126,8 @@ fun AddPredefinedSubscriptionScreen(
             Text("Başlangıç Tarihi", style = MaterialTheme.typography.titleMedium)
             DatePickerButton(
                 date = startDate,
-                onDateSelected = { startDate = it }
+                onDateSelected = { startDate = it },
+                label = "Başlangıç Tarihi"
             )
 
             // Ödeme periyodu

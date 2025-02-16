@@ -71,20 +71,46 @@ fun AddSubscriptionScreen(
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        startDate = Date(it)
-                    }
-                    showDatePicker = false
-                }) {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            startDate = Date(it)
+                        }
+                        showDatePicker = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Text("Tamam")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(
+                    onClick = { showDatePicker = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
                     Text("İptal")
                 }
-            }
+            },
+            colors = DatePickerDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                headlineContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                currentYearContentColor = MaterialTheme.colorScheme.primary,
+                selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                dayContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                todayContentColor = MaterialTheme.colorScheme.primary,
+                todayDateBorderColor = MaterialTheme.colorScheme.primary
+            )
         ) {
             DatePicker(state = datePickerState)
         }

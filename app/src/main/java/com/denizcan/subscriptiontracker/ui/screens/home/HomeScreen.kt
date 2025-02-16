@@ -207,6 +207,9 @@ fun SummaryCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
@@ -294,18 +297,27 @@ fun SubscriptionCard(
                     onClick = {
                         onDelete()
                         showDeleteDialog = false
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
                 ) {
                     Text("Evet")
                 }
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showDeleteDialog = false }
+                    onClick = { showDeleteDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) {
                     Text("Hayır")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
@@ -337,7 +349,10 @@ fun SubscriptionCard(
             modifier = modifier
                 .fillMaxWidth()
                 .clickable(onClick = onItemClick),
-            shape = MaterialTheme.shapes.medium
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Row(
                 modifier = Modifier
@@ -422,7 +437,10 @@ fun EmptySubscriptions(modifier: Modifier = Modifier) {
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Column(
                 modifier = Modifier

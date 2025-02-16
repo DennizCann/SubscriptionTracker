@@ -79,7 +79,8 @@ fun CalendarScreen(
                 subscriptions = when (val state = subscriptionState) {
                     is SubscriptionState.Success -> state.subscriptions
                     else -> emptyList()
-                }
+                },
+                effectivePlans = effectivePlans
             )
         }
         
@@ -102,29 +103,28 @@ fun CalendarScreen(
                 val paymentsForDate = when (val state = subscriptionState) {
                     is SubscriptionState.Success -> {
                         state.subscriptions.filter { subscription ->
-                            // Önce başlangıç tarihini kontrol et
+                            val selectedCal = Calendar.getInstance().apply { time = selectedDate!! }
+                            val startCal = Calendar.getInstance().apply { time = subscription.startDate }
+                            
+                            // Seçili tarih başlangıç tarihinden önce ise ödeme yok
                             if (selectedDate!!.before(subscription.startDate)) {
                                 return@filter false
                             }
-
-                            val paymentCal = Calendar.getInstance().apply { time = subscription.nextPaymentDate }
-                            val selectedCal = Calendar.getInstance().apply { time = selectedDate!! }
-                            val startDate = Calendar.getInstance().apply { time = subscription.startDate }
                             
                             when (subscription.paymentPeriod) {
                                 PaymentPeriod.MONTHLY -> 
-                                    selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH)
+                                    selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH)
                                 PaymentPeriod.QUARTERLY -> {
-                                    val monthDiff = (selectedCal.get(Calendar.YEAR) - startDate.get(Calendar.YEAR)) * 12 +
-                                            (selectedCal.get(Calendar.MONTH) - startDate.get(Calendar.MONTH))
+                                    val monthDiff = (selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                            (selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
                                     
-                                    selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH) &&
+                                    selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
                                             monthDiff >= 0 && monthDiff % 3 == 0
                                 }
                                 PaymentPeriod.YEARLY -> 
-                                    selectedCal.get(Calendar.MONTH) == paymentCal.get(Calendar.MONTH) &&
-                                    selectedCal.get(Calendar.DAY_OF_MONTH) == paymentCal.get(Calendar.DAY_OF_MONTH) &&
-                                    selectedCal.get(Calendar.YEAR) >= startDate.get(Calendar.YEAR)
+                                    selectedCal.get(Calendar.MONTH) == startCal.get(Calendar.MONTH) &&
+                                    selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
+                                    selectedCal.get(Calendar.YEAR) >= startCal.get(Calendar.YEAR)
                             }
                         }
                     }
@@ -145,7 +145,10 @@ fun CalendarScreen(
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
@@ -212,15 +215,15 @@ fun MonthCalendar(
     selectedDate: Date?,
     onDateSelected: (Date) -> Unit,
     subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
+    effectivePlans: Map<String, PlanHistoryEntry?>
 ) {
-    Column(modifier = modifier) {
-        // Haftanın günleri başlığı
+    Column {
+        // Günler başlığı
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            listOf("Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz").forEach { day ->
+            listOf("Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pa").forEach { day ->
                 Text(
                     text = day,
                     modifier = Modifier.weight(1f),
@@ -229,8 +232,6 @@ fun MonthCalendar(
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         // Takvim grid'i
         LazyVerticalGrid(
@@ -254,44 +255,28 @@ fun MonthCalendar(
                 date.set(Calendar.DAY_OF_MONTH, day + 1)
                 
                 val hasPayment = subscriptions.any { subscription ->
-                    // Önce başlangıç tarihini kontrol et
+                    // Seçili tarih başlangıç tarihinden önce ise ödeme yok
                     if (date.time.before(subscription.startDate)) {
                         return@any false
                     }
 
+                    val selectedCal = date
+                    val startCal = Calendar.getInstance().apply { time = subscription.startDate }
+                    
                     when (subscription.paymentPeriod) {
-                        PaymentPeriod.MONTHLY -> {
-                            val paymentDay = Calendar.getInstance().apply { 
-                                time = subscription.nextPaymentDate 
-                            }.get(Calendar.DAY_OF_MONTH)
-                            
-                            date.get(Calendar.DAY_OF_MONTH) == paymentDay
-                        }
+                        PaymentPeriod.MONTHLY -> 
+                            selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH)
                         PaymentPeriod.QUARTERLY -> {
-                            val nextPayment = Calendar.getInstance().apply { 
-                                time = subscription.nextPaymentDate 
-                            }
-                            val startDate = Calendar.getInstance().apply {
-                                time = subscription.startDate
-                            }
-                            val monthDiff = (date.get(Calendar.YEAR) - startDate.get(Calendar.YEAR)) * 12 +
-                                    (date.get(Calendar.MONTH) - startDate.get(Calendar.MONTH))
+                            val monthDiff = (selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                    (selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
                             
-                            date.get(Calendar.DAY_OF_MONTH) == nextPayment.get(Calendar.DAY_OF_MONTH) &&
+                            selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
                                     monthDiff >= 0 && monthDiff % 3 == 0
                         }
-                        PaymentPeriod.YEARLY -> {
-                            val nextPayment = Calendar.getInstance().apply { 
-                                time = subscription.nextPaymentDate 
-                            }
-                            val startDate = Calendar.getInstance().apply {
-                                time = subscription.startDate
-                            }
-                            
-                            date.get(Calendar.MONTH) == nextPayment.get(Calendar.MONTH) &&
-                                    date.get(Calendar.DAY_OF_MONTH) == nextPayment.get(Calendar.DAY_OF_MONTH) &&
-                                    date.get(Calendar.YEAR) >= startDate.get(Calendar.YEAR)
-                        }
+                        PaymentPeriod.YEARLY -> 
+                            selectedCal.get(Calendar.MONTH) == startCal.get(Calendar.MONTH) &&
+                            selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
+                            selectedCal.get(Calendar.YEAR) >= startCal.get(Calendar.YEAR)
                     }
                 }
 

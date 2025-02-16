@@ -116,7 +116,10 @@ fun MonthlyExpenseCard(
     val yearlyTotal = monthlyTotal * 12
 
     Card(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -175,7 +178,12 @@ fun MonthlyTrendCard(
         }
     }
     
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Aylık Trend",
@@ -305,11 +313,17 @@ fun CategoryPieChartCard(
         android.graphics.Color.parseColor("#78909C")  // Gri
     )
 
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Kategori Dağılımı",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -323,11 +337,16 @@ fun CategoryPieChartCard(
                         PieChart(context).apply {
                             description.isEnabled = false
                             setUsePercentValues(true)
-                            legend.isEnabled = true
+                            legend.apply {
+                                isEnabled = true
+                                textColor = android.graphics.Color.WHITE
+                                textSize = 12f
+                            }
                             setDrawEntryLabels(false)
                             setDrawCenterText(true)
                             centerText = "Kategori\nDağılımı"
                             setCenterTextSize(14f)
+                            setCenterTextColor(android.graphics.Color.WHITE)
                             setHoleColor(android.graphics.Color.TRANSPARENT)
                             setTransparentCircleColor(android.graphics.Color.TRANSPARENT)
                             setTransparentCircleAlpha(110)
@@ -389,7 +408,12 @@ fun SubscriptionStatsCard(
         .maxByOrNull { it.value }
         ?.key
 
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -473,7 +497,10 @@ fun TopSubscriptionsCard(
         .take(5)
 
     Card(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -507,4 +534,29 @@ fun TopSubscriptionsCard(
 
 private fun formatCurrency(amount: Double): String {
     return NumberFormat.getCurrencyInstance(Locale("tr", "TR")).format(amount)
+}
+
+@Composable
+private fun SettingsSection(
+    onLogoutClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Ayarlar",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            // ... existing code ...
+        }
+    }
 } 

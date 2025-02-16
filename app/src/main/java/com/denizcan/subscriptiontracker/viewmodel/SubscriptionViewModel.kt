@@ -42,12 +42,94 @@ class SubscriptionViewModel : ViewModel() {
     private val _subscriptionState = MutableStateFlow<SubscriptionState>(SubscriptionState.Loading)
     val subscriptionState: StateFlow<SubscriptionState> = _subscriptionState
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
     init {
         loadSubscriptions()
     }
 
     fun refresh() {
         loadSubscriptions()
+    }
+
+    fun refreshSubscriptionDetails(subscriptionId: String) {
+        viewModelScope.launch {
+            try {
+                _isRefreshing.value = true
+                
+                val userId = auth.currentUser?.uid ?: throw Exception("Kullanıcı oturum açmamış")
+                
+                // Üyelik bilgilerini yenile
+                val docRef = firestore.collection("users")
+                    .document(userId)
+                    .collection("subscriptions")
+                    .document(subscriptionId)
+                    .get()
+                    .await()
+
+                if (docRef.exists()) {
+                    val data = docRef.data
+                    if (data != null) {
+                        val subscription = Subscription(
+                            id = docRef.id,
+                            name = data["name"] as? String ?: "",
+                            plan = data["plan"] as? String ?: "",
+                            price = (data["price"] as? Number)?.toDouble() ?: 0.0,
+                            category = try {
+                                SubscriptionCategory.valueOf(data["category"] as? String ?: SubscriptionCategory.OTHER.name)
+                            } catch (e: Exception) {
+                                SubscriptionCategory.OTHER
+                            },
+                            startDate = (data["startDate"] as? com.google.firebase.Timestamp)?.toDate() ?: Date(),
+                            nextPaymentDate = (data["nextPaymentDate"] as? com.google.firebase.Timestamp)?.toDate() ?: Date(),
+                            paymentPeriod = try {
+                                PaymentPeriod.valueOf(data["paymentPeriod"] as? String ?: PaymentPeriod.MONTHLY.name)
+                            } catch (e: Exception) {
+                                PaymentPeriod.MONTHLY
+                            }
+                        )
+                        
+                        // Plan geçmişini yenile
+                        val planHistorySnapshot = firestore.collection("users")
+                            .document(userId)
+                            .collection("subscriptions")
+                            .document(subscriptionId)
+                            .collection("planHistory")
+                            .orderBy("startDate")
+                            .get()
+                            .await()
+
+                        val planHistory = planHistorySnapshot.documents.mapNotNull { doc ->
+                            try {
+                                val historyData = doc.data ?: return@mapNotNull null
+                                PlanHistoryEntry(
+                                    plan = historyData["plan"] as? String ?: return@mapNotNull null,
+                                    price = (historyData["price"] as? Number)?.toDouble() ?: return@mapNotNull null,
+                                    startDate = (historyData["startDate"] as? com.google.firebase.Timestamp)?.toDate() ?: return@mapNotNull null,
+                                    endDate = (historyData["endDate"] as? com.google.firebase.Timestamp)?.toDate()
+                                )
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+
+                        // State'i güncelle
+                        _subscriptionState.value = SubscriptionState.Success(
+                            subscriptions = (subscriptionState.value as? SubscriptionState.Success)?.subscriptions?.map {
+                                if (it.id == subscriptionId) subscription else it
+                            } ?: listOf(subscription),
+                            totalMonthlyExpense = calculateMonthlyTotal((subscriptionState.value as? SubscriptionState.Success)?.subscriptions ?: emptyList()),
+                            upcomingPayment = findUpcomingPayment((subscriptionState.value as? SubscriptionState.Success)?.subscriptions ?: emptyList())
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                println("Yenileme hatası: ${e.message}")
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 
     private fun loadSubscriptions() {
@@ -94,8 +176,34 @@ class SubscriptionViewModel : ViewModel() {
                                 PaymentPeriod.MONTHLY
                             }
                         )
-                        println("İşlenen abonelik: $subscription")
-                        subscription
+
+                        // Plan geçmişini al ve son planın başlangıç tarihini kullan
+                        val planHistorySnapshot = firestore.collection("users")
+                            .document(userId)
+                            .collection("subscriptions")
+                            .document(doc.id)
+                            .collection("planHistory")
+                            .orderBy("startDate", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                            .limit(1)
+                            .get()
+                            .await()
+
+                        val lastPlan = if (!planHistorySnapshot.isEmpty) {
+                            val lastPlanDoc = planHistorySnapshot.documents.first()
+                            val lastPlanData = lastPlanDoc.data
+                            if (lastPlanData != null) {
+                                val startDate = (lastPlanData["startDate"] as? com.google.firebase.Timestamp)?.toDate()
+                                if (startDate != null) {
+                                    subscription.copy(
+                                        startDate = startDate,
+                                        nextPaymentDate = calculateCurrentNextPaymentDate(startDate, subscription.paymentPeriod)
+                                    )
+                                } else subscription
+                            } else subscription
+                        } else subscription
+
+                        println("İşlenen abonelik: $lastPlan")
+                        lastPlan
                     } catch (e: Exception) {
                         println("Döküman işleme hatası: ${e.message}")
                         null
@@ -125,16 +233,8 @@ class SubscriptionViewModel : ViewModel() {
     }
 
     fun calculateNextPaymentDate(startDate: Date, period: PaymentPeriod): Date {
-        val calendar = Calendar.getInstance()
-        calendar.time = startDate
-        
-        when (period) {
-            PaymentPeriod.MONTHLY -> calendar.add(Calendar.MONTH, 1)
-            PaymentPeriod.QUARTERLY -> calendar.add(Calendar.MONTH, 3)
-            PaymentPeriod.YEARLY -> calendar.add(Calendar.YEAR, 1)
-        }
-        
-        return calendar.time
+        // İlk ödeme başlangıç tarihinde olacak
+        return startDate
     }
 
     fun calculateCurrentNextPaymentDate(startDate: Date, period: PaymentPeriod): Date {
@@ -143,31 +243,21 @@ class SubscriptionViewModel : ViewModel() {
         calendar.time = startDate
 
         // Başlangıç tarihinden itibaren şu anki tarihe kadar olan periyot sayısını hesapla
-        var periodsPassed = 0
         when (period) {
             PaymentPeriod.MONTHLY -> {
-                periodsPassed = ((now.timeInMillis - calendar.timeInMillis) / 
-                    (1000L * 60 * 60 * 24 * 30)).toInt()
-                calendar.add(Calendar.MONTH, periodsPassed + 1)
+                while (calendar.before(now) || calendar.equals(now)) {
+                    calendar.add(Calendar.MONTH, 1)
+                }
             }
             PaymentPeriod.QUARTERLY -> {
-                periodsPassed = ((now.timeInMillis - calendar.timeInMillis) / 
-                    (1000L * 60 * 60 * 24 * 90)).toInt()
-                calendar.add(Calendar.MONTH, (periodsPassed + 1) * 3)
+                while (calendar.before(now) || calendar.equals(now)) {
+                    calendar.add(Calendar.MONTH, 3)
+                }
             }
             PaymentPeriod.YEARLY -> {
-                periodsPassed = ((now.timeInMillis - calendar.timeInMillis) / 
-                    (1000L * 60 * 60 * 24 * 365)).toInt()
-                calendar.add(Calendar.YEAR, periodsPassed + 1)
-            }
-        }
-
-        // Eğer hesaplanan tarih geçmişte kaldıysa bir sonraki periyoda geç
-        while (calendar.before(now)) {
-            when (period) {
-                PaymentPeriod.MONTHLY -> calendar.add(Calendar.MONTH, 1)
-                PaymentPeriod.QUARTERLY -> calendar.add(Calendar.MONTH, 3)
-                PaymentPeriod.YEARLY -> calendar.add(Calendar.YEAR, 1)
+                while (calendar.before(now) || calendar.equals(now)) {
+                    calendar.add(Calendar.YEAR, 1)
+                }
             }
         }
         

@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.foundation.background
+import androidx.compose.ui.window.DialogProperties
 
 data class QuickDateOption(
     val label: String,
@@ -29,6 +31,9 @@ fun DatePickerButton(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormatter = SimpleDateFormat("d MMMM yyyy", Locale("tr"))
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = date.time
+    )
     
     Column(modifier = modifier) {
         // Ana tarih seçici buton
@@ -83,32 +88,75 @@ fun DatePickerButton(
     }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date.time
-        )
-        
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        onDateSelected(Date(millis))
-                    }
-                    showDatePicker = false
-                }) {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            onDateSelected(Date(it))
+                        }
+                        showDatePicker = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Text("Tamam")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(
+                    onClick = { showDatePicker = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
                     Text("İptal")
                 }
-            }
-        ) {
-            DatePicker(
-                state = datePickerState,
-                showModeToggle = false
+            },
+            colors = DatePickerDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                headlineContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                weekdayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                subheadContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                yearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                currentYearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                dayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                todayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                todayDateBorderColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    modifier = Modifier.padding(16.dp),
+                    colors = DatePickerDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        headlineContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        weekdayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        subheadContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        yearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        currentYearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                        dayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                        todayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        todayDateBorderColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
         }
     }
 } 
