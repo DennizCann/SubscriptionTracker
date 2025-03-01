@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
+import com.denizcan.subscriptiontracker.model.PaymentPeriod
 import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
 import com.denizcan.subscriptiontracker.ui.theme.Spacing
 import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
@@ -135,8 +136,21 @@ fun MonthlyExpenseCard(
     modifier: Modifier = Modifier,
     spacing: Spacing
 ) {
-    val monthlyTotal = subscriptions.sumOf { it.price }
-    val yearlyTotal = monthlyTotal * 12
+    val monthlyTotal = subscriptions.sumOf { subscription ->
+        when (subscription.paymentPeriod) {
+            PaymentPeriod.MONTHLY -> subscription.price
+            PaymentPeriod.QUARTERLY -> subscription.price / 3.0
+            PaymentPeriod.YEARLY -> subscription.price / 12.0
+        }
+    }
+    
+    val yearlyTotal = subscriptions.sumOf { subscription ->
+        when (subscription.paymentPeriod) {
+            PaymentPeriod.MONTHLY -> subscription.price * 12.0
+            PaymentPeriod.QUARTERLY -> subscription.price * 4.0
+            PaymentPeriod.YEARLY -> subscription.price
+        }
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),

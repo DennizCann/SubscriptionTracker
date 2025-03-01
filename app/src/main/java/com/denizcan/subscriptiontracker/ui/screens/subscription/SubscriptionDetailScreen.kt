@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
@@ -50,6 +51,7 @@ fun SubscriptionDetailScreen(
     var planHistory by remember { mutableStateOf<List<PlanHistoryEntry>>(emptyList()) }
     var totalSpent by remember { mutableDoubleStateOf(0.0) }
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     // Yenileme fonksiyonu
     val refreshSubscription = {
@@ -390,27 +392,22 @@ fun SubscriptionDetailScreen(
                     }
                 },
                 confirmButton = {
-                    TextButton(
+                    Button(
                         onClick = {
                             val newPrice = upgradedPrice.toDoubleOrNull()
-                            if (upgradedPlan.isBlank() || newPrice == null) {
-                                return@TextButton
+                            if (upgradedPlan.isNotBlank() && newPrice != null) {
+                                viewModel.upgradePlan(
+                                    subscriptionId = sub.id,
+                                    newPlan = upgradedPlan,
+                                    newPrice = newPrice,
+                                    upgradeDate = selectedUpgradeDate
+                                )
+                                showUpgradePlanDialog = false
+                                refreshSubscription()
                             }
-
-                            viewModel.upgradePlan(
-                                subscriptionId = sub.id,
-                                newPlan = upgradedPlan,
-                                newPrice = newPrice,
-                                upgradeDate = selectedUpgradeDate
-                            )
-                            showUpgradePlanDialog = false
-                            refreshSubscription()
-                        },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
+                        }
                     ) {
-                        Text("Yükselt")
+                        Text("Kaydet")
                     }
                 },
                 dismissButton = {
@@ -433,7 +430,7 @@ fun SubscriptionDetailScreen(
     if (showEditDialog && subscription != null) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Üyeliği Düzenle") },
+            title = { Text("Üyelik Düzenle") },
             text = {
                 Column(
                     modifier = Modifier
@@ -446,12 +443,7 @@ fun SubscriptionDetailScreen(
                         onValueChange = { editedName = it },
                         label = { Text("Üyelik Adı") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        singleLine = true
                     )
 
                     OutlinedTextField(
@@ -459,12 +451,7 @@ fun SubscriptionDetailScreen(
                         onValueChange = { editedPlan = it },
                         label = { Text("Plan") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        singleLine = true
                     )
 
                     OutlinedTextField(
@@ -473,19 +460,14 @@ fun SubscriptionDetailScreen(
                         label = { Text("Fiyat") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        singleLine = true
                     )
 
                     Text(
                         text = "Kategori",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium
                     )
+
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -504,9 +486,9 @@ fun SubscriptionDetailScreen(
 
                     Text(
                         text = "Ödeme Periyodu",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium
                     )
+
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -539,32 +521,27 @@ fun SubscriptionDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
-                        if (editedName.isBlank() || editedCategory == null || editedPaymentPeriod == null || editedPlan.isBlank()) {
-                            return@TextButton
+                        if (editedName.isNotBlank() && 
+                            editedCategory != null && 
+                            editedPaymentPeriod != null && 
+                            editedPlan.isNotBlank()
+                        ) {
+                            val updatedSubscription = subscription!!.copy(
+                                name = editedName,
+                                plan = editedPlan,
+                                price = editedPrice.toDoubleOrNull() ?: subscription!!.price,
+                                category = editedCategory!!,
+                                paymentPeriod = editedPaymentPeriod!!,
+                                startDate = editedStartDate!!
+                            )
+                            viewModel.updateSubscription(updatedSubscription)
+                            showEditDialog = false
+                            refreshSubscription()
+                            viewModel.refresh()
                         }
-
-                        val updatedSubscription = subscription!!.copy(
-                            name = editedName,
-                            plan = editedPlan,
-                            price = editedPrice.toDoubleOrNull() ?: subscription!!.price,
-                            category = editedCategory!!,
-                            paymentPeriod = editedPaymentPeriod!!,
-                            startDate = editedStartDate!!
-                        )
-
-                        // Subscription'ı güncelle
-                        viewModel.updateSubscription(updatedSubscription)
-                        showEditDialog = false
-                        refreshSubscription()
-                        
-                        // Tüm sayfaları yenile
-                        viewModel.refresh()
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.primary
-                    )
+                    }
                 ) {
                     Text("Kaydet")
                 }
@@ -572,6 +549,41 @@ fun SubscriptionDetailScreen(
             dismissButton = {
                 TextButton(
                     onClick = { showEditDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Text("İptal")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    if (showDeleteDialog && subscription != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Üyeliği Sil") },
+            text = { Text("Bu üyeliği silmek istediğinize emin misiniz?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSubscription(subscription!!.id)
+                        showDeleteDialog = false
+                        onNavigateBack()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Sil")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -602,6 +614,9 @@ fun SubscriptionDetailScreen(
                         }
                         IconButton(onClick = { showEditDialog = true }) {
                             Icon(Icons.Default.Edit, contentDescription = "Düzenle")
+                        }
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Üyeliği Sil")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -674,8 +689,16 @@ fun SubscriptionDetailScreen(
                             title = "Ödeme Bilgileri",
                             items = listOf(
                                 "Plan" to sub.plan,
-                                "Aylık Ücret" to formatCurrency(sub.price),
-                                "Yıllık Maliyet" to formatCurrency(sub.price * 12)
+                                "Aylık Ücret" to formatCurrency(when (sub.paymentPeriod) {
+                                    PaymentPeriod.MONTHLY -> sub.price
+                                    PaymentPeriod.QUARTERLY -> sub.price / 3.0
+                                    PaymentPeriod.YEARLY -> sub.price / 12.0
+                                }),
+                                "Yıllık Maliyet" to formatCurrency(when (sub.paymentPeriod) {
+                                    PaymentPeriod.MONTHLY -> sub.price * 12.0
+                                    PaymentPeriod.QUARTERLY -> sub.price * 4.0
+                                    PaymentPeriod.YEARLY -> sub.price
+                                })
                             )
                         )
                     }

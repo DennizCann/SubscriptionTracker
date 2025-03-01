@@ -342,7 +342,23 @@ class SubscriptionViewModel : ViewModel() {
     }
 
     private fun calculateMonthlyTotal(subscriptions: List<Subscription>): Double {
-        return subscriptions.sumOf { it.price }
+        return subscriptions.sumOf { subscription ->
+            when (subscription.paymentPeriod) {
+                PaymentPeriod.MONTHLY -> subscription.price
+                PaymentPeriod.QUARTERLY -> subscription.price / 3.0
+                PaymentPeriod.YEARLY -> subscription.price / 12.0
+            }
+        }
+    }
+
+    private fun calculateYearlyTotal(subscriptions: List<Subscription>): Double {
+        return subscriptions.sumOf { subscription ->
+            when (subscription.paymentPeriod) {
+                PaymentPeriod.MONTHLY -> subscription.price * 12.0
+                PaymentPeriod.QUARTERLY -> subscription.price * 4.0
+                PaymentPeriod.YEARLY -> subscription.price
+            }
+        }
     }
 
     private fun findUpcomingPayment(subscriptions: List<Subscription>): Subscription? {
