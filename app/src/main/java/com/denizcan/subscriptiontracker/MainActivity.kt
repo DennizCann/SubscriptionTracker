@@ -7,11 +7,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -54,11 +58,32 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
         setContent {
             SubscriptionTrackerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                val view = LocalView.current
+                val isDark = isSystemInDarkTheme()
+                val surfaceColor = if (isDark) Color(0xFF121212) else Color.White
+                
+                if (!view.isInEditMode) {
+                    SideEffect {
+                        val window = (view.context as Activity).window
+                        window.statusBarColor = surfaceColor.copy(alpha = 0.7f).value.toInt()
+                        window.navigationBarColor = surfaceColor.copy(alpha = 0.7f).value.toInt()
+                        WindowCompat.getInsetsController(window, view).apply {
+                            isAppearanceLightStatusBars = !isDark
+                            isAppearanceLightNavigationBars = !isDark
+                        }
+                    }
+                }
+                
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surface
+                ) {
                     AppNavigation(
-                        modifier = Modifier.padding(innerPadding),
                         onGoogleSignIn = { viewModel.signInWithGoogle(this@MainActivity, googleSignInLauncher) },
                         viewModel = viewModel
                     )
@@ -70,14 +95,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun AppNavigation(
-    modifier: Modifier = Modifier,
     onGoogleSignIn: () -> Unit,
     viewModel: AuthViewModel
 ) {
     val navController = rememberNavController()
     val authState by viewModel.authState.collectAsState()
 
-    // Tek bir LaunchedEffect ile tüm state değişikliklerini yönet
     LaunchedEffect(authState) {
         println("AppNavigation - AuthState değişti: $authState")
         when (authState) {
@@ -108,12 +131,13 @@ fun AppNavigation(
     )
 
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
         bottomBar = {
             if (navController.currentBackStackEntryAsState().value?.destination?.route in items.map { it.route }) {
                 NavigationBar(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp),
+                        .navigationBarsPadding(),
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp
                 ) {
@@ -143,7 +167,9 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = if (authState is AuthState.Success) Screen.Home.route else Screen.Login.route,
-            modifier = modifier.padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
             composable(Screen.Login.route) {
                 LoginScreen(
