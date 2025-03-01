@@ -18,6 +18,10 @@ import com.denizcan.subscriptiontracker.model.PaymentPeriod
 import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.Spacing
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,6 +34,8 @@ fun CalendarScreen(
     var selectedDate by remember { mutableStateOf<Date?>(null) }
     var currentMonth by remember { mutableStateOf(Calendar.getInstance()) }
     var effectivePlans by remember { mutableStateOf<Map<String, PlanHistoryEntry?>>(emptyMap()) }
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
     
     // Seçili tarih değiştiğinde plan geçmişini güncelle
     LaunchedEffect(selectedDate, subscriptionState) {
@@ -47,131 +53,144 @@ fun CalendarScreen(
         }
     }
     
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
-        // Ay seçici ve takvim (sabit kısım)
-        Column(modifier = Modifier.weight(1f)) {
-            // Ay seçici
-            MonthSelector(
-                currentMonth = currentMonth,
-                onPreviousMonth = {
-                    currentMonth = (currentMonth.clone() as Calendar).apply {
-                        add(Calendar.MONTH, -1)
+        Column(
+            modifier = Modifier
+                .then(
+                    if (screenClass == ScreenClass.COMPACT) {
+                        Modifier.fillMaxWidth()
+                    } else {
+                        Modifier.width(600.dp)
                     }
-                },
-                onNextMonth = {
-                    currentMonth = (currentMonth.clone() as Calendar).apply {
-                        add(Calendar.MONTH, 1)
-                    }
-                }
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            // Takvim grid'i
-            MonthCalendar(
-                calendar = currentMonth,
-                selectedDate = selectedDate,
-                onDateSelected = { selectedDate = it },
-                subscriptions = when (val state = subscriptionState) {
-                    is SubscriptionState.Success -> state.subscriptions
-                    else -> emptyList()
-                },
-                effectivePlans = effectivePlans
-            )
-        }
-        
-        // Seçili gündeki ödemeler (kaydırılabilir kısım)
-        if (selectedDate != null) {
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                item {
-                    Text(
-                        text = "Ödemeler - ${SimpleDateFormat("d MMMM", Locale("tr")).format(selectedDate!!)}",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                val paymentsForDate = when (val state = subscriptionState) {
-                    is SubscriptionState.Success -> {
-                        state.subscriptions.filter { subscription ->
-                            val selectedCal = Calendar.getInstance().apply { time = selectedDate!! }
-                            val startCal = Calendar.getInstance().apply { time = subscription.startDate }
-                            
-                            // Seçili tarih başlangıç tarihinden önce ise ödeme yok
-                            if (selectedDate!!.before(subscription.startDate)) {
-                                return@filter false
-                            }
-                            
-                            when (subscription.paymentPeriod) {
-                                PaymentPeriod.MONTHLY -> 
-                                    selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH)
-                                PaymentPeriod.QUARTERLY -> {
-                                    val monthDiff = (selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
-                                            (selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
-                                    
-                                    selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
-                                            monthDiff >= 0 && monthDiff % 3 == 0
-                                }
-                                PaymentPeriod.YEARLY -> 
-                                    selectedCal.get(Calendar.MONTH) == startCal.get(Calendar.MONTH) &&
-                                    selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
-                                    selectedCal.get(Calendar.YEAR) >= startCal.get(Calendar.YEAR)
-                            }
+                )
+                .padding(spacing.large)
+        ) {
+            // Ay seçici ve takvim (sabit kısım)
+            Column(modifier = Modifier.weight(1f)) {
+                // Ay seçici
+                MonthSelector(
+                    currentMonth = currentMonth,
+                    onPreviousMonth = {
+                        currentMonth = (currentMonth.clone() as Calendar).apply {
+                            add(Calendar.MONTH, -1)
                         }
-                    }
-                    else -> emptyList()
-                }
-
-                if (paymentsForDate.isEmpty()) {
+                    },
+                    onNextMonth = {
+                        currentMonth = (currentMonth.clone() as Calendar).apply {
+                            add(Calendar.MONTH, 1)
+                        }
+                    },
+                    spacing = spacing
+                )
+                
+                Spacer(modifier = Modifier.height(spacing.small))
+                
+                // Takvim grid'i
+                MonthCalendar(
+                    calendar = currentMonth,
+                    selectedDate = selectedDate,
+                    onDateSelected = { selectedDate = it },
+                    subscriptions = when (val state = subscriptionState) {
+                        is SubscriptionState.Success -> state.subscriptions
+                        else -> emptyList()
+                    },
+                    effectivePlans = effectivePlans,
+                    spacing = spacing
+                )
+            }
+            
+            // Seçili gündeki ödemeler (kaydırılabilir kısım)
+            if (selectedDate != null) {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = spacing.small),
+                    verticalArrangement = Arrangement.spacedBy(spacing.small)
+                ) {
                     item {
                         Text(
-                            text = "Bu tarihte ödeme bulunmuyor",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Ödemeler - ${SimpleDateFormat("d MMMM", Locale("tr")).format(selectedDate!!)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = spacing.small)
                         )
                     }
-                } else {
-                    items(paymentsForDate) { subscription ->
-                        val effectivePlan = effectivePlans[subscription.id]
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+
+                    val paymentsForDate = when (val state = subscriptionState) {
+                        is SubscriptionState.Success -> {
+                            state.subscriptions.filter { subscription ->
+                                val selectedCal = Calendar.getInstance().apply { time = selectedDate!! }
+                                val startCal = Calendar.getInstance().apply { time = subscription.startDate }
+                                
+                                // Seçili tarih başlangıç tarihinden önce ise ödeme yok
+                                if (selectedDate!!.before(subscription.startDate)) {
+                                    return@filter false
+                                }
+                                
+                                when (subscription.paymentPeriod) {
+                                    PaymentPeriod.MONTHLY -> 
+                                        selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH)
+                                    PaymentPeriod.QUARTERLY -> {
+                                        val monthDiff = (selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                                (selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
+                                        
+                                        selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
+                                                monthDiff >= 0 && monthDiff % 3 == 0
+                                    }
+                                    PaymentPeriod.YEARLY -> 
+                                        selectedCal.get(Calendar.MONTH) == startCal.get(Calendar.MONTH) &&
+                                        selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
+                                        selectedCal.get(Calendar.YEAR) >= startCal.get(Calendar.YEAR)
+                                }
+                            }
+                        }
+                        else -> emptyList()
+                    }
+
+                    if (paymentsForDate.isEmpty()) {
+                        item {
+                            Text(
+                                text = "Bu tarihte ödeme bulunmuyor",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        ) {
-                            Row(
+                        }
+                    } else {
+                        items(paymentsForDate) { subscription ->
+                            val effectivePlan = effectivePlans[subscription.id]
+                            Card(
                                 modifier = Modifier
-                                    .padding(16.dp)
                                     .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
                             ) {
-                                Column {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(spacing.large)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = subscription.name,
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                        Text(
+                                            text = effectivePlan?.plan ?: subscription.plan,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                     Text(
-                                        text = subscription.name,
-                                        style = MaterialTheme.typography.titleSmall
-                                    )
-                                    Text(
-                                        text = effectivePlan?.plan ?: subscription.plan,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        text = "₺${effectivePlan?.price ?: subscription.price}",
+                                        style = MaterialTheme.typography.titleMedium
                                     )
                                 }
-                                Text(
-                                    text = "₺${effectivePlan?.price ?: subscription.price}",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
                             }
                         }
                     }
@@ -185,12 +204,13 @@ fun CalendarScreen(
 fun MonthSelector(
     currentMonth: Calendar,
     onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    spacing: Spacing
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = spacing.small),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -215,9 +235,12 @@ fun MonthCalendar(
     selectedDate: Date?,
     onDateSelected: (Date) -> Unit,
     subscriptions: List<Subscription>,
-    effectivePlans: Map<String, PlanHistoryEntry?>
+    effectivePlans: Map<String, PlanHistoryEntry?>,
+    spacing: Spacing
 ) {
-    Column {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(spacing.small)
+    ) {
         // Günler başlığı
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -236,7 +259,9 @@ fun MonthCalendar(
         // Takvim grid'i
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(spacing.small),
+            horizontalArrangement = Arrangement.spacedBy(spacing.small)
         ) {
             // Ayın ilk gününü hesapla
             val firstDayOfMonth = (calendar.clone() as Calendar).apply {

@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
 import com.denizcan.subscriptiontracker.model.Subscription
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
 import java.text.NumberFormat
 import java.util.*
 import androidx.compose.foundation.background
@@ -22,6 +23,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.Spacing
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.PieChart
@@ -35,6 +39,8 @@ fun AnalyticsScreen(
     viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val subscriptionState by viewModel.subscriptionState.collectAsState()
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
@@ -47,61 +53,77 @@ fun AnalyticsScreen(
             )
         }
     ) { padding ->
-        when (val state = subscriptionState) {
-            is SubscriptionState.Loading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            when (val state = subscriptionState) {
+                is SubscriptionState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
-            }
-            is SubscriptionState.Success -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        MonthlyExpenseCard(
-                            subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                is SubscriptionState.Success -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .then(
+                                if (screenClass == ScreenClass.COMPACT) {
+                                    Modifier.fillMaxWidth()
+                                } else {
+                                    Modifier.width(600.dp)
+                                }
+                            )
+                            .padding(padding),
+                        verticalArrangement = Arrangement.spacedBy(spacing.medium)
+                    ) {
+                        item {
+                            MonthlyExpenseCard(
+                                subscriptions = state.subscriptions,
+                                modifier = Modifier.padding(horizontal = spacing.large),
+                                spacing = spacing
+                            )
+                        }
 
-                    item {
-                        MonthlyTrendCard(
-                            subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp),
-                            viewModel = viewModel
-                        )
-                    }
+                        item {
+                            MonthlyTrendCard(
+                                subscriptions = state.subscriptions,
+                                modifier = Modifier.padding(horizontal = spacing.large),
+                                viewModel = viewModel,
+                                spacing = spacing
+                            )
+                        }
 
-                    item {
-                        CategoryPieChartCard(
-                            subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                        item {
+                            CategoryPieChartCard(
+                                subscriptions = state.subscriptions,
+                                modifier = Modifier.padding(horizontal = spacing.large),
+                                spacing = spacing
+                            )
+                        }
 
-                    item {
-                        SubscriptionStatsCard(
-                            subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                        item {
+                            SubscriptionStatsCard(
+                                subscriptions = state.subscriptions,
+                                modifier = Modifier.padding(horizontal = spacing.large),
+                                spacing = spacing
+                            )
+                        }
 
-                    item {
-                        TopSubscriptionsCard(
-                            subscriptions = state.subscriptions,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        item {
+                            TopSubscriptionsCard(
+                                subscriptions = state.subscriptions,
+                                modifier = Modifier.padding(horizontal = spacing.large),
+                                spacing = spacing
+                            )
+                        }
                     }
                 }
-            }
-            else -> {
-                Text("Bir hata oluştu")
+                else -> {
+                    Text(
+                        text = "Bir hata oluştu",
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
         }
     }
@@ -110,7 +132,8 @@ fun AnalyticsScreen(
 @Composable
 fun MonthlyExpenseCard(
     subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    spacing: Spacing
 ) {
     val monthlyTotal = subscriptions.sumOf { it.price }
     val yearlyTotal = monthlyTotal * 12
@@ -122,13 +145,13 @@ fun MonthlyExpenseCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(spacing.large)
         ) {
             Text(
                 text = "Harcama Özeti",
                 style = MaterialTheme.typography.titleLarge
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(spacing.medium))
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -164,7 +187,8 @@ fun MonthlyExpenseCard(
 fun MonthlyTrendCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier,
-    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    spacing: Spacing
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
     var planHistoryMap by remember { mutableStateOf<Map<String, List<PlanHistoryEntry>>>(emptyMap()) }
@@ -184,12 +208,12 @@ fun MonthlyTrendCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(spacing.large)) {
             Text(
                 text = "Aylık Trend",
                 style = MaterialTheme.typography.titleLarge
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(spacing.medium))
             
             Box(
                 modifier = Modifier
@@ -299,7 +323,8 @@ fun MonthlyTrendCard(
 @Composable
 fun CategoryPieChartCard(
     subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    spacing: Spacing
 ) {
     val chartColors = listOf(
         android.graphics.Color.parseColor("#E57373"), // Kırmızı
@@ -319,13 +344,13 @@ fun CategoryPieChartCard(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(spacing.large)) {
             Text(
                 text = "Kategori Dağılımı",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(spacing.medium))
             
             Box(
                 modifier = Modifier
@@ -397,7 +422,8 @@ fun CategoryPieChartCard(
 @Composable
 fun SubscriptionStatsCard(
     subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    spacing: Spacing
 ) {
     val totalSubscriptions = subscriptions.size
     val totalMonthlyExpense = subscriptions.sumOf { it.price }
@@ -415,8 +441,8 @@ fun SubscriptionStatsCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(spacing.large),
+            verticalArrangement = Arrangement.spacedBy(spacing.medium)
         ) {
             Text(
                 text = "İstatistikler",
@@ -490,7 +516,8 @@ fun StatItem(
 @Composable
 fun TopSubscriptionsCard(
     subscriptions: List<Subscription>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    spacing: Spacing
 ) {
     val topSubscriptions = subscriptions
         .sortedByDescending { it.price }
@@ -503,13 +530,13 @@ fun TopSubscriptionsCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(spacing.large)
         ) {
             Text(
                 text = "En Yüksek Abonelikler",
                 style = MaterialTheme.typography.titleLarge
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(spacing.medium))
 
             topSubscriptions.forEach { subscription ->
                 Row(

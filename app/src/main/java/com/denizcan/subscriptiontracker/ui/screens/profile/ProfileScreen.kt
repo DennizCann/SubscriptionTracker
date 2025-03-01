@@ -17,6 +17,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.denizcan.subscriptiontracker.viewmodel.AuthViewModel
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.Spacing
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +32,8 @@ fun ProfileScreen(
 ) {
     val userName by authViewModel.userName.collectAsState()
     val userEmail = authViewModel.getCurrentUser()?.email ?: ""
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
     
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -38,54 +44,67 @@ fun ProfileScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // Profil Başlığı
-            ProfileHeader(
-                userName = userName,
-                email = userEmail
-            )
-
-            Divider()
-
-            // İstatistikler
-            StatisticsSection(
-                subscriptionViewModel = subscriptionViewModel
-            )
-
-            Divider()
-
-            // Ayarlar Butonu
-            OutlinedButton(
-                onClick = onNavigateToSettings,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .then(
+                        if (screenClass == ScreenClass.COMPACT) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier.width(400.dp)
+                        }
+                    )
+                    .verticalScroll(rememberScrollState())
+                    .padding(spacing.large),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Profil Başlığı
+                ProfileHeader(
+                    userName = userName,
+                    email = userEmail,
+                    spacing = spacing
+                )
+
+                Divider()
+
+                // İstatistikler
+                StatisticsSection(
+                    subscriptionViewModel = subscriptionViewModel,
+                    spacing = spacing
+                )
+
+                Divider()
+
+                // Ayarlar Butonu
+                OutlinedButton(
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Settings, contentDescription = null)
-                    Text("Uygulama Ayarları")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Text("Uygulama Ayarları")
+                    }
                 }
-            }
 
-            // Çıkış Yap Butonu
-            OutlinedButton(
-                onClick = { showLogoutDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Çıkış Yap Butonu
+                OutlinedButton(
+                    onClick = { showLogoutDialog = true },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.ExitToApp, contentDescription = null)
-                    Text("Çıkış Yap")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.ExitToApp, contentDescription = null)
+                        Text("Çıkış Yap")
+                    }
                 }
             }
         }
@@ -130,7 +149,8 @@ fun ProfileScreen(
 @Composable
 private fun ProfileHeader(
     userName: String,
-    email: String
+    email: String,
+    spacing: Spacing
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -142,7 +162,7 @@ private fun ProfileHeader(
             modifier = Modifier.size(100.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(spacing.medium))
         Text(
             text = userName,
             style = MaterialTheme.typography.headlineMedium
@@ -157,7 +177,8 @@ private fun ProfileHeader(
 
 @Composable
 private fun StatisticsSection(
-    subscriptionViewModel: SubscriptionViewModel
+    subscriptionViewModel: SubscriptionViewModel,
+    spacing: Spacing
 ) {
     val subscriptionState by subscriptionViewModel.subscriptionState.collectAsState()
     
@@ -168,8 +189,8 @@ private fun StatisticsSection(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(spacing.large),
+            verticalArrangement = Arrangement.spacedBy(spacing.small)
         ) {
             Text(
                 text = "Abonelik İstatistikleri",

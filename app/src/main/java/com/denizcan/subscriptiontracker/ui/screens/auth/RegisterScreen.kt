@@ -9,6 +9,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.viewmodel.AuthViewModel
 import com.denizcan.subscriptiontracker.viewmodel.AuthState
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
 
 @Composable
 fun RegisterScreen(
@@ -17,6 +20,8 @@ fun RegisterScreen(
     viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val authState by viewModel.authState.collectAsState()
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
     
     LaunchedEffect(authState) {
         if (authState is AuthState.Success) {
@@ -24,76 +29,97 @@ fun RegisterScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "Kayıt Ol",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 32.dp)
-        )
+        val maxWidth = when (screenClass) {
+            ScreenClass.COMPACT -> Modifier.fillMaxWidth()
+            else -> Modifier.width(400.dp)
+        }
 
-        var name by remember { mutableStateOf("") }
-        var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-
-        if (authState is AuthState.Error) {
+        Column(
+            modifier = Modifier
+                .then(maxWidth)
+                .padding(spacing.large),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(spacing.medium)
+        ) {
             Text(
-                text = (authState as AuthState.Error).message,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(bottom = 16.dp)
+                text = "Kayıt Ol",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = spacing.large)
             )
-        }
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Ad Soyad") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("E-posta") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Şifre") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = { viewModel.register(name, email, password) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = authState !is AuthState.Loading
-        ) {
-            if (authState is AuthState.Loading) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-            } else {
-                Text("Kayıt Ol")
+            var name by remember { mutableStateOf("") }
+            var email by remember { mutableStateOf("") }
+            var password by remember { mutableStateOf("") }
+
+            if (authState is AuthState.Error) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = (authState as AuthState.Error).message,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(spacing.medium),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
-        }
 
-        TextButton(
-            onClick = onNavigateToLogin,
-            modifier = Modifier.padding(top = 16.dp)
-        ) {
-            Text("Zaten hesabın var mı? Giriş yap")
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Ad Soyad") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("E-posta") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Şifre") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            
+            Button(
+                onClick = { viewModel.register(name, email, password) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = authState !is AuthState.Loading && 
+                    name.isNotBlank() && 
+                    email.isNotBlank() && 
+                    password.isNotBlank()
+            ) {
+                if (authState is AuthState.Loading) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Text("Kayıt Ol")
+                }
+            }
+
+            TextButton(
+                onClick = onNavigateToLogin,
+                modifier = Modifier.padding(top = spacing.medium)
+            ) {
+                Text("Zaten hesabın var mı? Giriş yap")
+            }
         }
     }
 } 

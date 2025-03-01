@@ -9,9 +9,14 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.viewmodel.SettingsViewModel
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.Spacing
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,6 +25,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val settingsState by viewModel.settingsState.collectAsState()
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
 
     Scaffold(
         topBar = {
@@ -33,65 +40,93 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            item {
-                SettingsSection(title = "Tema Ayarları") {
-                    SettingsSwitchItem(
-                        title = "Sistem Temasını Kullan",
-                        icon = Icons.Default.Phone,
-                        checked = settingsState.isSystemTheme,
-                        onCheckedChange = { viewModel.updateSystemTheme(it) }
+            LazyColumn(
+                modifier = Modifier
+                    .then(
+                        if (screenClass == ScreenClass.COMPACT) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier.width(500.dp)
+                        }
                     )
-
-                    if (!settingsState.isSystemTheme) {
+                    .padding(padding),
+                contentPadding = PaddingValues(spacing.large),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium)
+            ) {
+                item {
+                    SettingsSection(
+                        title = "Tema Ayarları",
+                        spacing = spacing
+                    ) {
                         SettingsSwitchItem(
-                            title = "Koyu Tema",
-                            icon = Icons.Default.Settings,
-                            checked = settingsState.isDarkMode,
-                            onCheckedChange = { viewModel.updateDarkMode(it) }
+                            title = "Sistem Temasını Kullan",
+                            icon = Icons.Default.Phone,
+                            checked = settingsState.isSystemTheme,
+                            onCheckedChange = { viewModel.updateSystemTheme(it) },
+                            spacing = spacing
+                        )
+
+                        if (!settingsState.isSystemTheme) {
+                            SettingsSwitchItem(
+                                title = "Koyu Tema",
+                                icon = Icons.Default.Settings,
+                                checked = settingsState.isDarkMode,
+                                onCheckedChange = { viewModel.updateDarkMode(it) },
+                                spacing = spacing
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    SettingsSection(
+                        title = "Bildirim Ayarları",
+                        spacing = spacing
+                    ) {
+                        SettingsSwitchItem(
+                            title = "Ödeme Hatırlatıcıları",
+                            icon = Icons.Default.Notifications,
+                            checked = settingsState.isNotificationsEnabled,
+                            onCheckedChange = { viewModel.updateNotifications(it) },
+                            spacing = spacing
                         )
                     }
                 }
-            }
 
-            item {
-                SettingsSection(title = "Bildirim Ayarları") {
-                    SettingsSwitchItem(
-                        title = "Ödeme Hatırlatıcıları",
-                        icon = Icons.Default.Notifications,
-                        checked = settingsState.isNotificationsEnabled,
-                        onCheckedChange = { viewModel.updateNotifications(it) }
-                    )
+                item {
+                    SettingsSection(
+                        title = "Para Birimi",
+                        spacing = spacing
+                    ) {
+                        SettingsDropdownItem(
+                            title = "Varsayılan Para Birimi",
+                            icon = Icons.Default.Settings,
+                            selectedValue = settingsState.selectedCurrency,
+                            options = listOf("TRY", "USD", "EUR", "GBP"),
+                            onOptionSelected = { viewModel.updateCurrency(it) },
+                            spacing = spacing
+                        )
+                    }
                 }
-            }
 
-            item {
-                SettingsSection(title = "Para Birimi") {
-                    SettingsDropdownItem(
-                        title = "Varsayılan Para Birimi",
-                        icon = Icons.Default.Settings,
-                        selectedValue = settingsState.selectedCurrency,
-                        options = listOf("TRY", "USD", "EUR", "GBP"),
-                        onOptionSelected = { viewModel.updateCurrency(it) }
-                    )
-                }
-            }
-
-            item {
-                SettingsSection(title = "Dil Ayarları") {
-                    SettingsDropdownItem(
-                        title = "Uygulama Dili",
-                        icon = Icons.Default.Settings,
-                        selectedValue = settingsState.selectedLanguage,
-                        options = listOf("Türkçe", "English"),
-                        onOptionSelected = { viewModel.updateLanguage(it) }
-                    )
+                item {
+                    SettingsSection(
+                        title = "Dil Ayarları",
+                        spacing = spacing
+                    ) {
+                        SettingsDropdownItem(
+                            title = "Uygulama Dili",
+                            icon = Icons.Default.Settings,
+                            selectedValue = settingsState.selectedLanguage,
+                            options = listOf("Türkçe", "English"),
+                            onOptionSelected = { viewModel.updateLanguage(it) },
+                            spacing = spacing
+                        )
+                    }
                 }
             }
         }
@@ -101,6 +136,7 @@ fun SettingsScreen(
 @Composable
 fun SettingsSection(
     title: String,
+    spacing: Spacing,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -110,8 +146,8 @@ fun SettingsSection(
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(spacing.large),
+            verticalArrangement = Arrangement.spacedBy(spacing.small)
         ) {
             Text(
                 text = title,
@@ -127,14 +163,15 @@ fun SettingsSwitchItem(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    spacing: Spacing
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(spacing.small)
         ) {
             Icon(
                 imageVector = icon,
@@ -156,7 +193,8 @@ fun SettingsDropdownItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     selectedValue: String,
     options: List<String>,
-    onOptionSelected: (String) -> Unit
+    onOptionSelected: (String) -> Unit,
+    spacing: Spacing
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -165,7 +203,7 @@ fun SettingsDropdownItem(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(spacing.small)
         ) {
             Icon(
                 imageVector = icon,

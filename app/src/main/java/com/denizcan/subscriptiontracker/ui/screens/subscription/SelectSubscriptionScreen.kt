@@ -17,6 +17,8 @@ import com.denizcan.subscriptiontracker.model.PredefinedSubscription
 import com.denizcan.subscriptiontracker.model.PredefinedSubscriptions
 import com.denizcan.subscriptiontracker.model.SubscriptionCategory
 import com.denizcan.subscriptiontracker.ui.screens.home.CategoryFilterChips
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.Spacing
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,6 +29,7 @@ fun SelectSubscriptionScreen(
 ) {
     var selectedCategory by remember { mutableStateOf<SubscriptionCategory?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    val spacing = LocalSpacing.current
 
     Scaffold(
         topBar = {
@@ -48,7 +51,7 @@ fun SelectSubscriptionScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = spacing.medium),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -57,7 +60,7 @@ fun SelectSubscriptionScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Default.Add, null)
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.width(spacing.small))
                         Text("Özel Üyelik Ekle")
                     }
                 }
@@ -75,54 +78,62 @@ fun SelectSubscriptionScreen(
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(spacing.medium),
                 placeholder = { Text("Servis ara...") },
-                leadingIcon = { Icon(Icons.Default.Search, null) }
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                singleLine = true
             )
 
             // Kategori filtreleme
             CategoryFilterChips(
                 selectedCategory = selectedCategory,
-                onCategorySelected = { selectedCategory = it }
+                onCategorySelected = { selectedCategory = it },
+                spacing = spacing
             )
 
             // Hazır üyelikler listesi
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 8.dp,
-                    bottom = 80.dp // BottomBar için ekstra padding
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Filtrelenmiş üyelikleri kategorilere göre grupla
-                val groupedSubscriptions = PredefinedSubscriptions.subscriptions
+            val filteredSubscriptions = remember(selectedCategory, searchQuery) {
+                PredefinedSubscriptions.subscriptions
                     .filter { subscription ->
                         (selectedCategory == null || subscription.category == selectedCategory) &&
                         (searchQuery.isEmpty() || subscription.name.contains(searchQuery, ignoreCase = true))
                     }
                     .groupBy { it.category }
+            }
 
-                groupedSubscriptions.forEach { (category, subscriptions) ->
-                    item {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(bottom = spacing.extraLarge)
+            ) {
+                filteredSubscriptions.forEach { (category, subscriptions) ->
+                    item(key = category.name) {
                         Text(
                             text = category.displayName,
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(
+                                start = spacing.medium,
+                                end = spacing.medium,
+                                top = spacing.medium,
+                                bottom = spacing.small
+                            )
                         )
                     }
 
-                    items(subscriptions) { subscription ->
+                    items(
+                        items = subscriptions,
+                        key = { it.name }
+                    ) { subscription ->
                         SubscriptionCard(
                             subscription = subscription,
-                            onClick = { onSubscriptionSelected(subscription) }
+                            onClick = { onSubscriptionSelected(subscription) },
+                            spacing = spacing
                         )
                     }
 
                     item {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(spacing.medium))
                     }
                 }
             }
@@ -133,7 +144,8 @@ fun SelectSubscriptionScreen(
 @Composable
 fun SubscriptionCard(
     subscription: PredefinedSubscription,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    spacing: Spacing
 ) {
     Card(
         modifier = Modifier
@@ -145,7 +157,7 @@ fun SubscriptionCard(
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(spacing.medium)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

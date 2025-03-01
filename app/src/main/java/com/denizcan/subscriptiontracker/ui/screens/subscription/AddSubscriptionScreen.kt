@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,9 @@ import java.text.SimpleDateFormat
 import com.denizcan.subscriptiontracker.model.SubscriptionCategory
 import com.denizcan.subscriptiontracker.ui.components.DatePickerButton
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +45,8 @@ fun AddSubscriptionScreen(
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
 
     val subscriptionState by viewModel.subscriptionState.collectAsState()
 
@@ -128,152 +134,165 @@ fun AddSubscriptionScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Üyelik Adı") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = plan,
-                onValueChange = { plan = it },
-                label = { Text("Plan") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = price,
-                onValueChange = { price = it },
-                label = { Text("Fiyat") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Kategori seçimi
-            Text(
-                text = "Kategori",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                items(SubscriptionCategory.values()) { category ->
-                    FilterChip(
-                        selected = category == selectedCategory,
-                        onClick = { selectedCategory = category },
-                        label = { Text(category.displayName) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Ödeme periyodu seçimi
-            Text(
-                text = "Ödeme Periyodu",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                items(PaymentPeriod.values()) { period ->
-                    FilterChip(
-                        selected = period == selectedPaymentPeriod,
-                        onClick = { selectedPaymentPeriod = period },
-                        label = { Text(when(period) {
-                            PaymentPeriod.MONTHLY -> "Aylık"
-                            PaymentPeriod.QUARTERLY -> "3 Aylık"
-                            PaymentPeriod.YEARLY -> "Yıllık"
-                        }) }
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tarih seçiciler
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier
+                    .then(
+                        if (screenClass == ScreenClass.COMPACT) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier.width(500.dp)
+                        }
+                    )
+                    .padding(padding)
+                    .padding(spacing.large)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium)
             ) {
-                DatePickerButton(
-                    date = startDate,
-                    onDateSelected = { date ->
-                        startDate = date
-                    },
-                    label = "Başlangıç Tarihi"
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Üyelik Adı") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
-            }
 
-            if (showError) {
+                OutlinedTextField(
+                    value = plan,
+                    onValueChange = { plan = it },
+                    label = { Text("Plan") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Fiyat") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Kategori seçimi
                 Text(
-                    text = errorMessage,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    text = "Kategori",
+                    style = MaterialTheme.typography.titleMedium
                 )
-            }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Button(
-                onClick = {
-                    if (name.isBlank()) {
-                        showError = true
-                        errorMessage = "Üyelik adı boş olamaz"
-                        return@Button
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                    modifier = Modifier.padding(vertical = spacing.small)
+                ) {
+                    items(SubscriptionCategory.values()) { category ->
+                        FilterChip(
+                            selected = category == selectedCategory,
+                            onClick = { selectedCategory = category },
+                            label = { Text(category.displayName) }
+                        )
                     }
+                }
 
-                    if (price.isBlank() || price.toDoubleOrNull() == null) {
-                        showError = true
-                        errorMessage = "Geçerli bir fiyat giriniz"
-                        return@Button
+                // Ödeme periyodu seçimi
+                Text(
+                    text = "Ödeme Periyodu",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                    modifier = Modifier.padding(vertical = spacing.small)
+                ) {
+                    items(PaymentPeriod.values()) { period ->
+                        FilterChip(
+                            selected = period == selectedPaymentPeriod,
+                            onClick = { selectedPaymentPeriod = period },
+                            label = { Text(when(period) {
+                                PaymentPeriod.MONTHLY -> "Aylık"
+                                PaymentPeriod.QUARTERLY -> "3 Aylık"
+                                PaymentPeriod.YEARLY -> "Yıllık"
+                            }) }
+                        )
                     }
+                }
 
-                    if (selectedCategory == null) {
-                        showError = true
-                        errorMessage = "Lütfen bir kategori seçiniz"
-                        return@Button
-                    }
-
-                    isLoading = true
-                    showError = false
-
-                    viewModel.addSubscription(
-                        name = name,
-                        plan = plan,
-                        price = price.toDoubleOrNull() ?: 0.0,
-                        category = selectedCategory!!,
-                        paymentPeriod = selectedPaymentPeriod,
-                        startDate = startDate
+                // Tarih seçiciler
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(spacing.medium)
+                ) {
+                    DatePickerButton(
+                        date = startDate,
+                        onDateSelected = { date ->
+                            startDate = date
+                        },
+                        label = "Başlangıç Tarihi"
                     )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Kaydet")
+                }
+
+                if (showError) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(spacing.medium),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Button(
+                    onClick = {
+                        if (name.isBlank()) {
+                            showError = true
+                            errorMessage = "Üyelik adı boş olamaz"
+                            return@Button
+                        }
+
+                        if (price.isBlank() || price.toDoubleOrNull() == null) {
+                            showError = true
+                            errorMessage = "Geçerli bir fiyat giriniz"
+                            return@Button
+                        }
+
+                        if (selectedCategory == null) {
+                            showError = true
+                            errorMessage = "Lütfen bir kategori seçiniz"
+                            return@Button
+                        }
+
+                        isLoading = true
+                        showError = false
+
+                        viewModel.addSubscription(
+                            name = name,
+                            plan = plan,
+                            price = price.toDoubleOrNull() ?: 0.0,
+                            category = selectedCategory!!,
+                            paymentPeriod = selectedPaymentPeriod,
+                            startDate = startDate
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Kaydet")
+                    }
                 }
             }
         }

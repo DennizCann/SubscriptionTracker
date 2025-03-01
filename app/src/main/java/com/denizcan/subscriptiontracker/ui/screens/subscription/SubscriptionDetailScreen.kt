@@ -48,9 +48,8 @@ fun SubscriptionDetailScreen(
     var editedStartDate by remember { mutableStateOf<Date?>(null) }
     var showDatePicker by remember { mutableStateOf(false) }
     var planHistory by remember { mutableStateOf<List<PlanHistoryEntry>>(emptyList()) }
-    var totalSpent by remember { mutableStateOf(0.0) }
+    var totalSpent by remember { mutableDoubleStateOf(0.0) }
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val coroutineScope = rememberCoroutineScope()
 
     // Yenileme fonksiyonu
     val refreshSubscription = {
@@ -197,23 +196,47 @@ fun SubscriptionDetailScreen(
                 }
             },
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                headlineContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                weekdayContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                currentYearContentColor = MaterialTheme.colorScheme.primary,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                headlineContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                weekdayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                subheadContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                yearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                currentYearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 selectedYearContainerColor = MaterialTheme.colorScheme.primary,
                 selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
-                dayContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                dayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 selectedDayContainerColor = MaterialTheme.colorScheme.primary,
                 selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
-                todayContentColor = MaterialTheme.colorScheme.primary,
-                todayDateBorderColor = MaterialTheme.colorScheme.primary
+                todayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                todayDateBorderColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
         ) {
-            DatePicker(state = datePickerState)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                DatePicker(
+                    state = datePickerState,
+                    modifier = Modifier.padding(16.dp),
+                    colors = DatePickerDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        headlineContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        weekdayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        subheadContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        yearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        currentYearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                        dayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                        todayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        todayDateBorderColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                )
+            }
         }
     }
 
@@ -230,22 +253,72 @@ fun SubscriptionDetailScreen(
                 DatePickerDialog(
                     onDismissRequest = { showUpgradeDatePicker = false },
                     confirmButton = {
-                        TextButton(onClick = {
-                            datePickerState.selectedDateMillis?.let {
-                                selectedUpgradeDate = Date(it)
-                            }
-                            showUpgradeDatePicker = false
-                        }) {
+                        TextButton(
+                            onClick = {
+                                datePickerState.selectedDateMillis?.let {
+                                    selectedUpgradeDate = Date(it)
+                                }
+                                showUpgradeDatePicker = false
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
                             Text("Tamam")
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showUpgradeDatePicker = false }) {
+                        TextButton(
+                            onClick = { showUpgradeDatePicker = false },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
                             Text("İptal")
                         }
-                    }
+                    },
+                    colors = DatePickerDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        headlineContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        weekdayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        subheadContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        yearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        currentYearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                        dayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                        todayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        todayDateBorderColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 ) {
-                    DatePicker(state = datePickerState)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        DatePicker(
+                            state = datePickerState,
+                            modifier = Modifier.padding(16.dp),
+                            colors = DatePickerDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                headlineContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                weekdayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                subheadContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                yearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                currentYearContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedYearContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
+                                dayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedDayContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
+                                todayContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                todayDateBorderColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        )
+                    }
                 }
             }
 

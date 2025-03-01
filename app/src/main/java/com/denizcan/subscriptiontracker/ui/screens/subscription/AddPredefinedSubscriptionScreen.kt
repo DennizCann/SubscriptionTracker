@@ -1,6 +1,8 @@
 package com.denizcan.subscriptiontracker.ui.screens.subscription
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -8,15 +10,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.model.PaymentPeriod
 import com.denizcan.subscriptiontracker.model.PredefinedSubscription
-import com.denizcan.subscriptiontracker.ui.components.DatePickerButton
-import com.denizcan.subscriptiontracker.ui.components.PaymentPeriodSelector
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
 import java.util.*
+import com.denizcan.subscriptiontracker.ui.components.DatePickerButton
+import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
+import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
+import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
+import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,10 +35,30 @@ fun AddPredefinedSubscriptionScreen(
     var price by remember { mutableStateOf("") }
     var selectedPaymentPeriod by remember { mutableStateOf<PaymentPeriod>(PaymentPeriod.MONTHLY) }
     var startDate by remember { mutableStateOf(Date()) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = startDate.time
-    )
+    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    val spacing = LocalSpacing.current
+    val screenClass = getScreenClass()
+
+    val subscriptionState by viewModel.subscriptionState.collectAsState()
+
+    LaunchedEffect(subscriptionState) {
+        when (subscriptionState) {
+            is SubscriptionState.Error -> {
+                showError = true
+                errorMessage = (subscriptionState as SubscriptionState.Error).message
+                isLoading = false
+            }
+            is SubscriptionState.Success -> {
+                if (isLoading) {
+                    isLoading = false
+                    onNavigateBack()
+                }
+            }
+            else -> {}
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -44,98 +70,126 @@ fun AddPredefinedSubscriptionScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp
-            ) {
-                Button(
-                    onClick = {
-                        if (plan.isNotBlank() && price.isNotBlank()) {
-                            viewModel.addSubscription(
-                                name = predefinedSubscription.name,
-                                plan = plan,
-                                price = price.toDoubleOrNull() ?: 0.0,
-                                category = predefinedSubscription.category,
-                                paymentPeriod = selectedPaymentPeriod,
-                                startDate = startDate
-                            )
-                            onNavigateBack()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    enabled = plan.isNotBlank() && price.isNotBlank()
-                ) {
-                    Text("Kaydet")
-                }
-            }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
-            // Servis bilgileri
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                )
+            Column(
+                modifier = Modifier
+                    .then(
+                        if (screenClass == ScreenClass.COMPACT) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier.width(500.dp)
+                        }
+                    )
+                    .padding(padding)
+                    .padding(spacing.large)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                OutlinedTextField(
+                    value = plan,
+                    onValueChange = { plan = it },
+                    label = { Text("Plan") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = price,
+                    onValueChange = { price = it },
+                    label = { Text("Fiyat") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // Ödeme periyodu seçimi
+                Text(
+                    text = "Ödeme Periyodu",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
+                    modifier = Modifier.padding(vertical = spacing.small)
                 ) {
-                    Text(
-                        text = predefinedSubscription.name,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = predefinedSubscription.category.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    items(PaymentPeriod.values()) { period ->
+                        FilterChip(
+                            selected = period == selectedPaymentPeriod,
+                            onClick = { selectedPaymentPeriod = period },
+                            label = { Text(when(period) {
+                                PaymentPeriod.MONTHLY -> "Aylık"
+                                PaymentPeriod.QUARTERLY -> "3 Aylık"
+                                PaymentPeriod.YEARLY -> "Yıllık"
+                            }) }
+                        )
+                    }
+                }
+
+                // Tarih seçici
+                DatePickerButton(
+                    date = startDate,
+                    onDateSelected = { date ->
+                        startDate = date
+                    },
+                    label = "Başlangıç Tarihi"
+                )
+
+                if (showError) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(spacing.medium),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Button(
+                    onClick = {
+                        if (price.isBlank() || price.toDoubleOrNull() == null) {
+                            showError = true
+                            errorMessage = "Geçerli bir fiyat giriniz"
+                            return@Button
+                        }
+
+                        isLoading = true
+                        showError = false
+
+                        viewModel.addSubscription(
+                            name = predefinedSubscription.name,
+                            plan = plan,
+                            price = price.toDoubleOrNull() ?: 0.0,
+                            category = predefinedSubscription.category,
+                            paymentPeriod = selectedPaymentPeriod,
+                            startDate = startDate
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Kaydet")
+                    }
                 }
             }
-
-            // Plan girişi
-            Text("Plan Bilgileri", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = plan,
-                onValueChange = { plan = it },
-                label = { Text("Plan Adı") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            OutlinedTextField(
-                value = price,
-                onValueChange = { price = it },
-                label = { Text("Fiyat") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Başlangıç tarihi
-            Text("Başlangıç Tarihi", style = MaterialTheme.typography.titleMedium)
-            DatePickerButton(
-                date = startDate,
-                onDateSelected = { startDate = it },
-                label = "Başlangıç Tarihi"
-            )
-
-            // Ödeme periyodu
-            Text("Ödeme Periyodu", style = MaterialTheme.typography.titleMedium)
-            PaymentPeriodSelector(
-                selectedPeriod = selectedPaymentPeriod,
-                onPeriodSelected = { selectedPaymentPeriod = it }
-            )
         }
     }
 } 
