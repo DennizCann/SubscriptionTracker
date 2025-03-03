@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.denizcan.subscriptiontracker.model.Subscription
 import com.denizcan.subscriptiontracker.model.PaymentPeriod
+import com.denizcan.subscriptiontracker.ui.screens.home.formatCurrency
 import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionState
 import com.denizcan.subscriptiontracker.viewmodel.SubscriptionViewModel
@@ -131,11 +132,18 @@ fun CalendarScreen(
                                 }
                                 
                                 when (subscription.paymentPeriod) {
-                                    PaymentPeriod.MONTHLY -> 
-                                        selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH)
+                                    PaymentPeriod.MONTHLY -> {
+                                        // Başlangıç tarihinden bu yana geçen ay sayısını hesapla
+                                        val monthDiff = ((selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                                selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
+                                        
+                                        // Seçili gün, başlangıç günüyle aynıysa ve başlangıç tarihinden sonraysa ödeme var
+                                        selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
+                                                monthDiff >= 0
+                                    }
                                     PaymentPeriod.QUARTERLY -> {
-                                        val monthDiff = (selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
-                                                (selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
+                                        val monthDiff = ((selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                                selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
                                         
                                         selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
                                                 monthDiff >= 0 && monthDiff % 3 == 0
@@ -160,10 +168,10 @@ fun CalendarScreen(
                         }
                     } else {
                         items(paymentsForDate) { subscription ->
-                            val effectivePlan = effectivePlans[subscription.id]
+                            // O tarihte geçerli olan planı bul
+                            val effectivePlan by viewModel.getEffectivePlanForDate(subscription.id, selectedDate!!).collectAsState(initial = null)
                             Card(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
@@ -187,7 +195,7 @@ fun CalendarScreen(
                                         )
                                     }
                                     Text(
-                                        text = "₺${effectivePlan?.price ?: subscription.price}",
+                                        text = formatCurrency(effectivePlan?.price ?: subscription.price),
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                 }
@@ -289,11 +297,18 @@ fun MonthCalendar(
                     val startCal = Calendar.getInstance().apply { time = subscription.startDate }
                     
                     when (subscription.paymentPeriod) {
-                        PaymentPeriod.MONTHLY -> 
-                            selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH)
+                        PaymentPeriod.MONTHLY -> {
+                            // Başlangıç tarihinden bu yana geçen ay sayısını hesapla
+                            val monthDiff = ((selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                    selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
+                            
+                            // Seçili gün, başlangıç günüyle aynıysa ve başlangıç tarihinden sonraysa ödeme var
+                            selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
+                                    monthDiff >= 0
+                        }
                         PaymentPeriod.QUARTERLY -> {
-                            val monthDiff = (selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
-                                    (selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
+                            val monthDiff = ((selectedCal.get(Calendar.YEAR) - startCal.get(Calendar.YEAR)) * 12 +
+                                    selectedCal.get(Calendar.MONTH) - startCal.get(Calendar.MONTH))
                             
                             selectedCal.get(Calendar.DAY_OF_MONTH) == startCal.get(Calendar.DAY_OF_MONTH) &&
                                     monthDiff >= 0 && monthDiff % 3 == 0
