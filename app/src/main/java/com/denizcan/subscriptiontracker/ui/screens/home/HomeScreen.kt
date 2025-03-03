@@ -496,7 +496,7 @@ fun SubscriptionCard(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Üyeliği Sil") },
-            text = { Text("${subscription.name} üyeliğini silmek istediğinizden emin misiniz?") },
+            text = { Text("Bu üyeliği silmek istediğinize emin misiniz?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -511,10 +511,18 @@ fun SubscriptionCard(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(
+                    onClick = { showDeleteDialog = false },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
                     Text("İptal")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            textContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
