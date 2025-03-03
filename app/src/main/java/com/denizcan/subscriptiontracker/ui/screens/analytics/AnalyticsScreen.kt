@@ -30,9 +30,12 @@ import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
 import com.denizcan.subscriptiontracker.viewmodel.PlanHistoryEntry
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.charts.PieChart
+import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.PercentFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import java.util.Calendar
+import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +84,8 @@ fun AnalyticsScreen(
                             MonthlyExpenseCard(
                                 subscriptions = state.subscriptions,
                                 modifier = Modifier.padding(horizontal = spacing.large),
-                                spacing = spacing
+                                spacing = spacing,
+                                viewModel = viewModel
                             )
                         }
 
@@ -98,7 +102,8 @@ fun AnalyticsScreen(
                             CategoryPieChartCard(
                                 subscriptions = state.subscriptions,
                                 modifier = Modifier.padding(horizontal = spacing.large),
-                                spacing = spacing
+                                spacing = spacing,
+                                viewModel = viewModel
                             )
                         }
 
@@ -106,7 +111,8 @@ fun AnalyticsScreen(
                             SubscriptionStatsCard(
                                 subscriptions = state.subscriptions,
                                 modifier = Modifier.padding(horizontal = spacing.large),
-                                spacing = spacing
+                                spacing = spacing,
+                                viewModel = viewModel
                             )
                         }
 
@@ -114,7 +120,8 @@ fun AnalyticsScreen(
                             TopSubscriptionsCard(
                                 subscriptions = state.subscriptions,
                                 modifier = Modifier.padding(horizontal = spacing.large),
-                                spacing = spacing
+                                spacing = spacing,
+                                viewModel = viewModel
                             )
                         }
                     }
@@ -134,22 +141,15 @@ fun AnalyticsScreen(
 fun MonthlyExpenseCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier,
-    spacing: Spacing
+    spacing: Spacing,
+    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    val monthlyTotal = subscriptions.sumOf { subscription ->
-        when (subscription.paymentPeriod) {
-            PaymentPeriod.MONTHLY -> subscription.price
-            PaymentPeriod.QUARTERLY -> subscription.price / 3.0
-            PaymentPeriod.YEARLY -> subscription.price / 12.0
-        }
+    val monthlyAverage = subscriptions.sumOf { subscription ->
+        viewModel.calculateMonthlyAmount(subscription)
     }
     
     val yearlyTotal = subscriptions.sumOf { subscription ->
-        when (subscription.paymentPeriod) {
-            PaymentPeriod.MONTHLY -> subscription.price * 12.0
-            PaymentPeriod.QUARTERLY -> subscription.price * 4.0
-            PaymentPeriod.YEARLY -> subscription.price
-        }
+        viewModel.calculateYearlyAmount(subscription)
     }
 
     Card(
@@ -173,11 +173,11 @@ fun MonthlyExpenseCard(
             ) {
                 Column {
                     Text(
-                        text = "Aylık Toplam",
+                        text = "Aylık Ortalama",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = formatCurrency(monthlyTotal),
+                        text = formatCurrency(monthlyAverage),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -207,13 +207,26 @@ fun MonthlyTrendCard(
     val primaryColor = MaterialTheme.colorScheme.primary.toArgb()
     var planHistoryMap by remember { mutableStateOf<Map<String, List<PlanHistoryEntry>>>(emptyMap()) }
     
+    // Son 5 ayın isimlerini al
+    val monthNames = remember {
+        val calendar = Calendar.getInstance()
+        val monthFormat = SimpleDateFormat("MMMM", Locale("tr"))
+        List(5) { i ->
+            val currentMonth = calendar.clone() as Calendar
+            currentMonth.add(Calendar.MONTH, -4 + i)
+            monthFormat.format(currentMonth.time)
+        }
+    }
+    
     // Plan geçmişlerini yükle
     LaunchedEffect(subscriptions) {
+        val newPlanHistoryMap = mutableMapOf<String, List<PlanHistoryEntry>>()
         subscriptions.forEach { subscription ->
             viewModel.getPlanHistory(subscription.id).collect { history ->
-                planHistoryMap = planHistoryMap + (subscription.id to history)
+                newPlanHistoryMap[subscription.id] = history
             }
         }
+        planHistoryMap = newPlanHistoryMap
     }
     
     Card(
@@ -232,78 +245,91 @@ fun MonthlyTrendCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(300.dp)
             ) {
                 AndroidView(
                     factory = { context ->
                         LineChart(context).apply {
                             description.isEnabled = false
-                            setTouchEnabled(true)
-                            isDragEnabled = true
-                            setScaleEnabled(false)
-                            setPinchZoom(false)
                             legend.isEnabled = false
-                            axisRight.isEnabled = false
-                            axisLeft.apply {
-                                setDrawGridLines(false)
-                                setDrawAxisLine(true)
-                                textColor = primaryColor
-                            }
-                            xAxis.apply {
-                                setDrawGridLines(false)
-                                position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
-                                textColor = primaryColor
-                                setDrawAxisLine(true)
-                            }
-                            setDrawBorders(false)
+                            setTouchEnabled(true)
+                            setScaleEnabled(false)
                             setDrawGridBackground(false)
-                            setViewPortOffsets(50f, 20f, 30f, 50f)
-                            animateX(1000)
+                            
+                            xAxis.apply {
+                                position = XAxis.XAxisPosition.BOTTOM
+                                textColor = android.graphics.Color.WHITE
+                                setDrawGridLines(false)
+                                granularity = 1f
+                                valueFormatter = object : ValueFormatter() {
+                                    override fun getFormattedValue(value: Float): String {
+                                        return monthNames.getOrNull(value.toInt()) ?: ""
+                                    }
+                                }
+                            }
+                            
+                            axisLeft.apply {
+                                textColor = android.graphics.Color.WHITE
+                                setDrawGridLines(true)
+                                valueFormatter = object : ValueFormatter() {
+                                    override fun getFormattedValue(value: Float): String {
+                                        return formatCurrency(value.toDouble())
+                                    }
+                                }
+                            }
+                            
+                            axisRight.isEnabled = false
+                            
+                            setExtraOffsets(20f, 20f, 20f, 20f)
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
                     update = { chart ->
-                        val entries = ArrayList<Entry>()
+                        val entries = mutableListOf<Entry>()
                         val calendar = Calendar.getInstance()
-                        val now = Date()
                         
-                        // Son 6 ayın verilerini hazırla
-                        for (i in 0..5) {
-                            calendar.time = now
-                            calendar.add(Calendar.MONTH, -i)
-                            
-                            // Bu ay başlangıcı
+                        // Bugünün tarihini al
+                        val today = calendar.time
+                        
+                        // 4 ay öncesine git
+                        calendar.add(Calendar.MONTH, -4)
+                        
+                        // Son 5 ay için veri noktaları oluştur
+                        for (i in 0 until 5) {
+                            // Ay başı ve sonu tarihlerini ayarla
                             calendar.set(Calendar.DAY_OF_MONTH, 1)
-                            calendar.set(Calendar.HOUR_OF_DAY, 0)
-                            calendar.set(Calendar.MINUTE, 0)
-                            calendar.set(Calendar.SECOND, 0)
-                            calendar.set(Calendar.MILLISECOND, 0)
                             val monthStart = calendar.time
                             
-                            // Bu ay sonu
-                            calendar.add(Calendar.MONTH, 1)
-                            calendar.add(Calendar.MILLISECOND, -1)
+                            calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH))
                             val monthEnd = calendar.time
                             
-                            // Bu aydaki toplam harcamayı hesapla
                             var monthlyTotal = 0.0
                             
+                            // Her üyelik için o aydaki harcamayı hesapla
                             subscriptions.forEach { subscription ->
                                 val planHistory = planHistoryMap[subscription.id] ?: emptyList()
                                 
                                 // Bu ay için geçerli olan planı bul
                                 val effectivePlan = planHistory.findLast { entry ->
-                                    entry.startDate <= monthEnd && 
-                                    (entry.endDate == null || entry.endDate > monthStart)
+                                    val entryStart = entry.startDate
+                                    val entryEnd = entry.endDate ?: today
+                                    
+                                    // Plan bu ay içinde aktif mi kontrol et
+                                    (entryStart <= monthEnd && entryEnd >= monthStart)
                                 }
                                 
                                 // Eğer plan bulunduysa fiyatı ekle
-                                if (effectivePlan != null) {
-                                    monthlyTotal += effectivePlan.price
+                                effectivePlan?.let { plan ->
+                                    monthlyTotal += when (subscription.paymentPeriod) {
+                                        PaymentPeriod.MONTHLY -> plan.price
+                                        PaymentPeriod.QUARTERLY -> plan.price / 3.0
+                                        PaymentPeriod.YEARLY -> plan.price / 12.0
+                                    }
                                 }
                             }
                             
-                            entries.add(0, Entry((5 - i).toFloat(), monthlyTotal.toFloat()))
+                            entries.add(Entry(i.toFloat(), monthlyTotal.toFloat()))
+                            calendar.add(Calendar.MONTH, 1)
                         }
 
                         val dataSet = LineDataSet(entries, "Aylık Harcama").apply {
@@ -314,6 +340,11 @@ fun MonthlyTrendCard(
                             setDrawValues(true)
                             valueTextSize = 10f
                             valueTextColor = primaryColor
+                            valueFormatter = object : ValueFormatter() {
+                                override fun getFormattedValue(value: Float): String {
+                                    return formatCurrency(value.toDouble())
+                                }
+                            }
                             mode = LineDataSet.Mode.CUBIC_BEZIER
                             cubicIntensity = 0.2f
                             setDrawFilled(true)
@@ -338,8 +369,16 @@ fun MonthlyTrendCard(
 fun CategoryPieChartCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier,
-    spacing: Spacing
+    spacing: Spacing,
+    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val categoryAmounts = subscriptions
+        .groupBy { it.category }
+        .mapValues { (_, subs) ->
+            subs.sumOf { subscription ->
+                viewModel.calculateMonthlyAmount(subscription)
+            }
+        }
     val chartColors = listOf(
         android.graphics.Color.parseColor("#E57373"), // Kırmızı
         android.graphics.Color.parseColor("#81C784"), // Yeşil
@@ -399,20 +438,9 @@ fun CategoryPieChartCard(
                     },
                     modifier = Modifier.fillMaxSize(),
                     update = { chart ->
-                        // Kategori bazlı harcamaları hesapla
-                        val categoryExpenses = subscriptions
-                            .groupBy { it.category }
-                            .mapValues { (_, subs) -> subs.sumOf { it.price } }
-                            .toList()
-                            .sortedByDescending { it.second }
-
-                        // Toplam aylık harcama
-                        val totalMonthlyExpense = subscriptions.sumOf { it.price }
-
-                        val entries = categoryExpenses.map { (category, amount) ->
-                            val percentage = (amount / totalMonthlyExpense) * 100
+                        val entries = categoryAmounts.map { (category, amount) ->
                             PieEntry(
-                                percentage.toFloat(),
+                                amount.toFloat(),
                                 category.displayName
                             )
                         }
@@ -437,16 +465,22 @@ fun CategoryPieChartCard(
 fun SubscriptionStatsCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier,
-    spacing: Spacing
+    spacing: Spacing,
+    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val totalSubscriptions = subscriptions.size
-    val totalMonthlyExpense = subscriptions.sumOf { it.price }
-    val averageExpense = if (totalSubscriptions > 0) totalMonthlyExpense / totalSubscriptions else 0.0
-    val mostExpensiveCategory = subscriptions
+    
+    // Kategorilere göre aylık harcamaları hesapla
+    val categoryExpenses = subscriptions
         .groupBy { it.category }
-        .mapValues { (_, subs) -> subs.sumOf { it.price } }
-        .maxByOrNull { it.value }
-        ?.key
+        .mapValues { (_, subs) -> 
+            subs.sumOf { subscription ->
+                viewModel.calculateMonthlyAmount(subscription)
+            }
+        }
+    
+    // En çok harcama yapılan kategoriyi ve tutarını bul
+    val mostExpensiveCategory = categoryExpenses.maxByOrNull { it.value }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -475,16 +509,16 @@ fun SubscriptionStatsCard(
                 )
 
                 StatItem(
-                    icon = Icons.Default.Info,
-                    label = "Ort. Aylık Maliyet",
-                    value = formatCurrency(averageExpense),
+                    icon = Icons.Default.CheckCircle,
+                    label = "En Yüksek Kategori",
+                    value = mostExpensiveCategory?.key?.displayName ?: "-",
                     modifier = Modifier.weight(1f)
                 )
 
                 StatItem(
-                    icon = Icons.Default.CheckCircle,
-                    label = "En Yüksek Kategori",
-                    value = mostExpensiveCategory?.displayName ?: "-",
+                    icon = Icons.Default.Info,
+                    label = "Kategori Maliyeti",
+                    value = formatCurrency(mostExpensiveCategory?.value ?: 0.0),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -531,10 +565,14 @@ fun StatItem(
 fun TopSubscriptionsCard(
     subscriptions: List<Subscription>,
     modifier: Modifier = Modifier,
-    spacing: Spacing
+    spacing: Spacing,
+    viewModel: SubscriptionViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    val topSubscriptions = subscriptions
-        .sortedByDescending { it.price }
+    // Abonelikleri aylık maliyetlerine göre sırala
+    val sortedSubscriptions = subscriptions
+        .sortedByDescending { subscription ->
+            viewModel.calculateMonthlyAmount(subscription)
+        }
         .take(5)
 
     Card(
@@ -552,20 +590,40 @@ fun TopSubscriptionsCard(
             )
             Spacer(modifier = Modifier.height(spacing.medium))
 
-            topSubscriptions.forEach { subscription ->
+            sortedSubscriptions.forEach { subscription ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = subscription.name,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = when(subscription.paymentPeriod) {
+                                PaymentPeriod.MONTHLY -> "Aylık"
+                                PaymentPeriod.QUARTERLY -> "3 Aylık"
+                                PaymentPeriod.YEARLY -> "Yıllık"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
-                        text = subscription.name,
+                        text = formatCurrency(viewModel.calculateMonthlyAmount(subscription)),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Text(
-                        text = formatCurrency(subscription.price),
-                        style = MaterialTheme.typography.bodyMedium
+                }
+                if (subscription != sortedSubscriptions.last()) {
+                    Divider(
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                     )
                 }
             }

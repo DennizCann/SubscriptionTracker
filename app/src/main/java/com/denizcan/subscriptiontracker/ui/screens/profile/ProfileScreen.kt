@@ -21,6 +21,8 @@ import com.denizcan.subscriptiontracker.ui.theme.LocalSpacing
 import com.denizcan.subscriptiontracker.ui.theme.ScreenClass
 import com.denizcan.subscriptiontracker.ui.theme.Spacing
 import com.denizcan.subscriptiontracker.ui.theme.getScreenClass
+import java.text.NumberFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -214,7 +216,14 @@ private fun StatisticsSection(
                     icon = Icons.Default.Info,
                     title = "Aylık Toplam",
                     value = when (subscriptionState) {
-                        is SubscriptionState.Success -> "${(subscriptionState as SubscriptionState.Success).totalMonthlyExpense} ₺"
+                        is SubscriptionState.Success -> {
+                            val amount = (subscriptionState as SubscriptionState.Success).totalMonthlyExpense
+                            val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR")).apply {
+                                maximumFractionDigits = 3
+                                minimumFractionDigits = 0
+                            }
+                            format.format(amount)
+                        }
                         else -> "0 ₺"
                     }
                 )
