@@ -1,5 +1,6 @@
 package com.denizcan.subscriptiontracker.ui.screens.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -57,6 +58,31 @@ fun SettingsScreen(
                 contentPadding = PaddingValues(spacing.large),
                 verticalArrangement = Arrangement.spacedBy(spacing.medium)
             ) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(spacing.large),
+                            verticalArrangement = Arrangement.spacedBy(spacing.small)
+                        ) {
+                            Text(
+                                text = "🚧 Yapım Aşamasında",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Bu sayfa henüz geliştirme aşamasındadır. Yakında tüm özellikleriyle birlikte kullanıma sunulacaktır.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+
                 item {
                     SettingsSection(
                         title = "Tema Ayarları",
@@ -218,15 +244,26 @@ fun SettingsDropdownItem(
             }
             DropdownMenu(
                 expanded = expanded,
-                onDismissRequest = { expanded = false }
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 options.forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(option) },
+                        text = { 
+                            Text(
+                                text = option,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            ) 
+                        },
                         onClick = {
                             onOptionSelected(option)
                             expanded = false
-                        }
+                        },
+                        colors = MenuDefaults.itemColors(
+                            textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            trailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
                 }
             }
